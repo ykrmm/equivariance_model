@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from utils import * 
 
 
 
@@ -20,7 +21,27 @@ def iou(outputs: torch.Tensor, labels: torch.Tensor):
 
     return iou.mean()  # Or thresholded.mean() if you are interested in average across the batch
 
+def inter_over_union(pred, mask, num_class=21):
+    """
+        https://github.com/chenxi116/DeepLabv3.pytorch/blob/master/utils.py
+        Inter over Union functions using numpy fast histogram.
+        
+    """
+    pred = np.asarray(pred, dtype=np.uint8).copy()
+    mask = np.asarray(mask, dtype=np.uint8).copy()
 
+    # 255 -> 0
+    pred += 1
+    mask += 1
+    pred = pred * (mask > 0)
+
+    inter = pred * (pred == mask)
+    (area_inter, _) = np.histogram(inter, bins=num_class, range=(1, num_class))
+    (area_pred, _) = np.histogram(pred, bins=num_class, range=(1, num_class))
+    (area_mask, _) = np.histogram(mask, bins=num_class, range=(1, num_class))
+    area_union = area_pred + area_mask - area_inter
+    # return (area_inter/area_union) # original return of the pytorch function 
+    return np.nanmean(area_inter/area_union)
  
 
 def _fast_hist(label_true, label_pred, n_class):
@@ -57,25 +78,25 @@ def scores(label_trues, label_preds, n_class=21):
     }
 
 
-def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_index=21),nclass=21,device='cpu'):
+def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_index=21),nclass=21,device='cpu',plot=True):
   loss_test = []
   iou_test = []
   pixel_accuracy = []
-  weight_iou = []
   with torch.no_grad():
     for i,(x,mask) in enumerate(val_loader):
           x = x.to(device)
           mask = mask.to(device)
-
           model.eval()
           pred = model(x)
-
-
+          try:
+                pred = pred["out"]
+          except:
+                print('')
+            
           loss = criterion(pred,mask)
           loss_test.append(loss.item())
-          
           s = scores(pred.max(dim=1)[1],mask)
-          ioU = float(iou(pred.argmax(dim=1),mask))
+          IoU = inter_over_union(pred.argmax(dim=1).detach().cpu(),mask.detach().cpu())
           """
             return {
               "Pixel Accuracy": acc,
@@ -85,14 +106,15 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
               "Class IoU": cls_iu,
           }
           """
-          iou_test.append(ioU)
           pixel_accuracy.append(s["Pixel Accuracy"])
-          weight_iou.append(s["Frequency Weighted IoU"])
+          iou_test.append(IoU)
+          if plot:
+              plot_pred_mask(pred.argmax(dim=1).detach().cpu()[0],mask.detach().cpu()[0],cmap=None,iou=True)
+           
 
     
 
-    print("Mean IOU :",np.array(iou_test).mean(),"Frequency Weighted IOU :",np.array(weight_iou).mean(),\
-          "Pixel Accuracy :",np.array(pixel_accuracy).mean(),"Loss Validation :",np.array(loss_test).mean())
+    print("Mean IOU :",np.array(iou_test).mean(),"Pixel Accuracy :",np.array(pixel_accuracy).mean(),"Loss Validation :",np.array(loss_test).mean())
  
     
 
