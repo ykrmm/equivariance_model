@@ -7,6 +7,7 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 from metric import *
 from scipy.ndimage.interpolation import rotate as scipy_rotate
+import pandas as pd
 
 
 ### CONSTANT
@@ -153,11 +154,11 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
   loss_test = []
   iou_test = []
   pixel_accuracy = []
+  model.eval()
   with torch.no_grad():
     for i,(x,mask) in enumerate(val_loader):
           x = x.to(device)
           mask = mask.to(device)
-          model.eval()
           pred = model(x)
           try:
                 pred = pred["out"]
@@ -202,7 +203,7 @@ def rotate_image(image,angle,reshape=False):
     elif len(image.size())==4: # Case of a batch of images
         axes = ((2,3))
     else:
-        print("Size must be 4 or 5.")
+        print("Dimension of images must be 4 or 5.")
         return 
     im = scipy_rotate(image.numpy(),angle=angle,reshape=reshape,axes=axes)
     im_t = torch.FloatTensor(im)
@@ -227,9 +228,11 @@ def rotate_mask(mask,angle,reshape=False):
         mask_t = torch.FloatTensor(m)
         return mask_t
     
-def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDivLoss(reduction='mean'),device='cpu'):
+def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDivLoss(reduction='mean'),device='cpu',plot=False):
     """
-    
+       This function compute the equivariance loss with the rotation transformation for a batch of images. 
+       It also give the accuracy between the output produce by the original image and the outpute produce by the 
+       transforme image.
     """
     x = x.to(device)
     rot_x,new_angle = rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
@@ -242,43 +245,57 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
         pred_rot = model(rot_x.to(device))
     
     pred_droit = rotate_mask(pred_rot.detach().cpu(),new_angle,reshape=reshape)
-    loss = criterion(softmax(pred_x.cpu()).log(),softmax(pred_droit.cpu()))
+    loss = criterion(softmax(pred_x.cpu()).log(),softmax(pred_droit.cpu())) #KL divergence between the two predictions
     acc = scores(pred_x.argmax(dim=1).detach().cpu(),pred_droit.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
+    if plot:
+        class_pred = plot_equiv_mask(pred_droit.argmax(dim=1).detach().cpu()[0],pred_x.argmax(dim=1).detach().cpu()[0])
+        return loss,acc,class_pred
+        
+        
     return loss,acc  
 
-## METRIC FUNCTIONS
-def inter_over_union(pred, mask, num_class=21):
+def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'),\
+                        nclass=21,device='cpu',plot=True,angle_max=30,random_angle=False):
     """
-        https://github.com/chenxi116/DeepLabv3.pytorch/blob/master/utils.py
-        Inter over Union functions using numpy fast histogram.
+        Function to compute the accuracy between the mask where the input had a geometric transformation 
+        and the mask geometric transformed with the original input.
+        random_angle -> boolean : If true a Random angle between 0 and angle_max is used for the evaluation.
+        angle_max -> float : The max angle for rotate the input. 
+        plot -> boolean : True plot the two masks side by side.
+    """
+    n  = np.empty(21*len(val_loader)).reshape(len(val_loader),21)
+    n[:]  = np.NaN # array initialize with NaN in order to compute accuracy per class. 
+    
+    
+    loss_test = []
+    pixel_accuracy = []
+    model.eval()
+    with torch.no_grad():
+        for i,(x,mask) in enumerate(val_loader):
+            if random_angle:
+                angle = np.random.randint(0,angle_max)
+            else:
+                angle = angle_max
+
+            loss_equiv,acc,class_pred = compute_transformations_batch(x,model,angle,reshape=False,\
+                                                         criterion=criterion,device=device,plot=plot)
+            n[i][class_pred] = acc
+            loss_test.append(loss_equiv)
+            pixel_accuracy.append(acc)
+            print('accuracy :',acc)
+    n = np.nanmean(n,axis=0)
+    try:
+        acc_classes = pd.Series(n,index=list(VOC_CLASSES))
+        print("Mean Pixel Accuracy between masks :",np.array(pixel_accuracy).mean(),\
+          "Loss Validation :",np.array(loss_test).mean())
+        return acc_classes
+    except:
+        print('fail dataframe')
+        print("Mean Pixel Accuracy between masks :",np.array(pixel_accuracy).mean(),\
+          "Loss Validation :",np.array(loss_test).mean())
+        return n
         
-    """
-    pred = np.asarray(pred, dtype=np.uint8).copy()
-    mask = np.asarray(mask, dtype=np.uint8).copy()
-
-    # 255 -> 0
-    pred += 1
-    mask += 1
-    pred = pred * (mask > 0)
-
-    inter = pred * (pred == mask)
-    (area_inter, _) = np.histogram(inter, bins=num_class, range=(1, num_class))
-    (area_pred, _) = np.histogram(pred, bins=num_class, range=(1, num_class))
-    (area_mask, _) = np.histogram(mask, bins=num_class, range=(1, num_class))
-    area_union = area_pred + area_mask - area_inter
-    # return (area_inter/area_union) # original return of the pytorch function 
-    return np.nanmean(area_inter/area_union)
-
-
-
-
-
-
-
-
-
-
 
 ### PLOT UTILS FUNCTIONS
 
@@ -301,9 +318,11 @@ def plot_pred_mask(pred,mask,cmap=None,iou=True):
         cmap = get_cmap()
     fig = plt.figure()
     a = fig.add_subplot(1,2,1)
+    a.title.set_text('Ground truth')
     plt.imshow(mask,cmap=cmap,vmin=0,vmax=21) #plt.cm.get_cmap('cubehelix', 21)
     a = fig.add_subplot(1,2,2)
-    plt.imshow(pred,cmap=cmap,vmin=0,vmax=NUM_CLASSES)
+    plt.imshow(pred,cmap=cmap,vmin=0,vmax=21)
+    a.title.set_text('Predicted mask')
     plt.show()
     class_pred = []
     class_mask = []
@@ -317,6 +336,35 @@ def plot_pred_mask(pred,mask,cmap=None,iou=True):
     if iou:
         IoU = inter_over_union(pred,mask)
         print('IoU on this mask :',IoU)
+        
+def plot_equiv_mask(rot_mask,mask,cmap=None):
+    """
+        Function for plot the prediction, the original mask and the classes during the training.
+        rot_mask -> (size,size) device : cpu (use detach().cpu()) The mask where the input was geometric transformed
+        mask -> (size,size) device : cpu (use detach().cpu() and argmax) The mask with the original input
+    """
+    if cmap is None:
+        cmap = get_cmap()
+    fig = plt.figure()
+    a = fig.add_subplot(1,2,1)
+    a.title.set_text('Mask with the original input')
+    plt.imshow(mask,cmap=cmap,vmin=0,vmax=NUM_CLASSES) #plt.cm.get_cmap('cubehelix', 21)
+    a = fig.add_subplot(1,2,2)
+    a.title.set_text('Mask with the rotated input')
+    plt.imshow(rot_mask,cmap=cmap,vmin=0,vmax=NUM_CLASSES)
+    plt.show()
+    class_pred = []
+    class_mask = []
+    ind_class = []
+
+    for p in mask.unique():
+        ind_class.append(int(p))
+        class_pred.append(VOC_CLASSES[int(p)])
+    print("predicted classes with the original input : ",class_pred)
+    for p in rot_mask.unique():
+      class_mask.append(VOC_CLASSES[int(p)])
+    print("predicted classes with the rotated input  : ",class_mask)
+    return ind_class
         
         
     
