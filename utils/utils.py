@@ -97,6 +97,7 @@ def inter_over_union(pred, mask, num_class=21):
     """
         https://github.com/chenxi116/DeepLabv3.pytorch/blob/master/utils.py
         Inter over Union functions using numpy fast histogram.
+        IoU  computed on one image or batch
         
     """
     pred = np.asarray(pred, dtype=np.uint8).copy()
@@ -114,7 +115,27 @@ def inter_over_union(pred, mask, num_class=21):
     area_union = area_pred + area_mask - area_inter
     # return (area_inter/area_union) # original return of the pytorch function 
     return np.nanmean(area_inter/area_union)
- 
+def inter_over_union_all(pred, mask, num_class=21):
+    """
+        https://github.com/chenxi116/DeepLabv3.pytorch/blob/master/utils.py
+        Inter over Union functions using numpy fast histogram.
+        return iou on all class.
+        
+    """
+    pred = np.asarray(pred, dtype=np.uint8).copy()
+    mask = np.asarray(mask, dtype=np.uint8).copy()
+
+    # 255 -> 0
+    pred += 1
+    mask += 1
+    pred = pred * (mask > 0)
+
+    inter = pred * (pred == mask)
+    (area_inter, _) = np.histogram(inter, bins=num_class, range=(1, num_class))
+    (area_pred, _) = np.histogram(pred, bins=num_class, range=(1, num_class))
+    (area_mask, _) = np.histogram(mask, bins=num_class, range=(1, num_class))
+    area_union = area_pred + area_mask - area_inter
+    return (area_inter/area_union) # original return of the pytorch function 
 
 def _fast_hist(label_true, label_pred, n_class):
     mask = (label_true >= 0) & (label_true < n_class)
@@ -154,6 +175,7 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
   loss_test = []
   iou_test = []
   pixel_accuracy = []
+  all_iou = []
   model.eval()
   with torch.no_grad():
     for i,(x,mask) in enumerate(val_loader):
@@ -169,6 +191,7 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
           loss_test.append(loss.item())
           s = scores(pred.max(dim=1)[1],mask)
           IoU = inter_over_union(pred.argmax(dim=1).detach().cpu(),mask.detach().cpu())
+          IoU_all = inter_over_union_all(pred.argmax(dim=1).detach().cpu(),mask.detach().cpu())
           """
             return {
               "Pixel Accuracy": acc,
@@ -180,6 +203,7 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
           """
           pixel_accuracy.append(s["Pixel Accuracy"])
           iou_test.append(IoU)
+          all_iou.append(IoU_all)
           if plot:
               plot_pred_mask(pred.argmax(dim=1).detach().cpu()[0],mask.detach().cpu()[0],cmap=None,iou=True)
            
@@ -187,6 +211,7 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
     
 
     print("Mean IOU :",np.array(iou_test).mean(),"Pixel Accuracy :",np.array(pixel_accuracy).mean(),"Loss Validation :",np.array(loss_test).mean())
+    return all_iou
 
 ### EQUIVARIANCE UTILS FUNCTIONS 
 
@@ -244,9 +269,10 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
         pred_x = model(x.to(device))
         pred_rot = model(rot_x.to(device))
     
-    pred_droit = rotate_mask(pred_rot.detach().cpu(),new_angle,reshape=reshape)
-    loss = criterion(softmax(pred_x.cpu()).log(),softmax(pred_droit.cpu())) #KL divergence between the two predictions
-    acc = scores(pred_x.argmax(dim=1).detach().cpu(),pred_droit.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
+    pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Apply the rotation on the mask with the original input
+    
+    loss = criterion(softmax(pred_rot.cpu()).log(),softmax(pred_rot_x.cpu())) #KL divergence between the two predictions
+    acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
         class_pred = plot_equiv_mask(pred_droit.argmax(dim=1).detach().cpu()[0],pred_x.argmax(dim=1).detach().cpu()[0])
