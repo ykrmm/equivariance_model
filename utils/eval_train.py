@@ -11,7 +11,7 @@ CMAP  = colors.ListedColormap(['black','green','blue','yellow','pink','orange','
                                 ,'olive','beige','brown','royalblue','violet'])
 
 
-def eval_iou(model,val_loader,device='cpu',num_classes=21,ign_index=None,batch_size=1):
+def eval_model(model,val_loader,device='cpu',num_classes=21):
     def get_bs():
         return batch_size
 
@@ -36,6 +36,37 @@ def eval_iou(model,val_loader,device='cpu',num_classes=21,ign_index=None,batch_s
     .attach(val_evaluator, "CE Loss")
 
     state = val_evaluator.run(val_loader)
+    #print("mIoU :",state.metrics['mean IoU'])
+    #print("Accuracy :",state.metrics['accuracy'])
+    #print("CE Loss :",state.metrics['CE Loss'])
+    
+    return state
+
+def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',num_classes=21):
+
+
+    def train_function(engine, batch):
+        model.train()       
+        img, mask = batch[0].to(device), batch[1].to(device)       
+        mask_pred = model(img)
+        try:
+            mask_pred = mask_pred['out'] 
+        except:
+            print('')
+        loss = criterion(mask_pred, mask)
+        loss.backward()
+        optimizer.step()
+        return loss.item()
+
+
+    train_engine = Engine(evaluate_function)
+    cm = ConfusionMatrix(num_classes=num_classes)
+    mIoU(cm,ignore_index=ign_index).attach(train_engine, 'mean IoU')   
+    Accuracy().attach(train_engine, "accuracy")
+    Loss(loss_fn=nn.CrossEntropyLoss(ignore_index=21))\
+    .attach(train_engine, "CE Loss")
+
+    state = train_engine.run(train_loader)
     #print("mIoU :",state.metrics['mean IoU'])
     #print("Accuracy :",state.metrics['accuracy'])
     #print("CE Loss :",state.metrics['CE Loss'])
