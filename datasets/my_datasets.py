@@ -90,7 +90,9 @@ class VOCSegmentation(VisionDataset):
                  std=[0.229, 0.224, 0.225],
                  size_img=(513,513),
                  size_crop=(500,500),
-                 p=0.5):
+                 p=0.5,
+                 p_rotate = 0.25,
+                 rotate=False):
         super(VOCSegmentation, self).__init__(root, transforms, transform, target_transform)
         ## Transformations
         self.mean = mean
@@ -98,6 +100,8 @@ class VOCSegmentation(VisionDataset):
         self.size_img = size_img
         self.size_crop = size_crop
         self.p = p
+        self.p_rotate = p_rotate
+        self.rotate = rotate
         self.train = image_set == 'train' or image_set == 'trainval'
         ##
         self.year = year
@@ -151,6 +155,12 @@ class VOCSegmentation(VisionDataset):
             if random.random() > self.p:
                 image = TF.hflip(image)
                 mask = TF.hflip(mask)
+            if self.rotate:
+                if random.random() > self.p_rotate:
+                    angle = np.random.randint(0,30)
+                    image = TF.rotate(image,angle=angle)
+                    mask = TF.rotate(mask,angle=angle)
+                    
 
         
 
@@ -246,7 +256,9 @@ class SBDataset(VisionDataset):
                  std=[0.229, 0.224, 0.225],
                  size_img=(513,513),
                  size_crop=(500,500),
-                 p=0.5):
+                 p=0.5,
+                 p_rotate=0.25,
+                 rotate=False):
 
         try:
             from scipy.io import loadmat
@@ -262,6 +274,8 @@ class SBDataset(VisionDataset):
         self.size_img = size_img
         self.size_crop = size_crop
         self.p = p
+        self.p_rotate = p_rotate
+        self.rotate = rotate
         self.train = image_set == 'train' or image_set == 'train_noval'
         ##
         self.image_set = verify_str_arg(image_set, "image_set",
@@ -324,6 +338,12 @@ class SBDataset(VisionDataset):
             if random.random() > self.p:
                 image = TF.hflip(image)
                 mask = TF.hflip(mask)
+                
+            if self.rotate:
+                if random.random() > self.p_rotate:
+                    angle = np.random.randint(0,30)
+                    image = TF.rotate(image,angle=angle)
+                    mask = TF.rotate(mask,angle=angle)
 
         
 
