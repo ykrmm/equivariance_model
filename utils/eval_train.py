@@ -12,8 +12,6 @@ CMAP  = colors.ListedColormap(['black','green','blue','yellow','pink','orange','
 
 
 def eval_model(model,val_loader,device='cpu',num_classes=21):
-    def get_bs():
-        return batch_size
 
     def evaluate_function(engine, batch):
         model.eval()
@@ -30,9 +28,9 @@ def eval_model(model,val_loader,device='cpu',num_classes=21):
 
     val_evaluator = Engine(evaluate_function)
     cm = ConfusionMatrix(num_classes=num_classes)
-    mIoU(cm,ignore_index=ign_index).attach(val_evaluator, 'mean IoU')   
+    mIoU(cm).attach(val_evaluator, 'mean IoU')   
     Accuracy().attach(val_evaluator, "accuracy")
-    Loss(loss_fn=nn.CrossEntropyLoss(ignore_index=21))\
+    Loss(loss_fn=nn.CrossEntropyLoss())\
     .attach(val_evaluator, "CE Loss")
 
     state = val_evaluator.run(val_loader)
@@ -59,11 +57,11 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
         return loss.item()
 
 
-    train_engine = Engine(evaluate_function)
+    train_engine = Engine(train_function)
     cm = ConfusionMatrix(num_classes=num_classes)
-    mIoU(cm,ignore_index=ign_index).attach(train_engine, 'mean IoU')   
+    mIoU(cm).attach(train_engine, 'mean IoU')   
     Accuracy().attach(train_engine, "accuracy")
-    Loss(loss_fn=nn.CrossEntropyLoss(ignore_index=21))\
+    Loss(loss_fn=nn.CrossEntropyLoss())\
     .attach(train_engine, "CE Loss")
 
     state = train_engine.run(train_loader)

@@ -157,9 +157,14 @@ class VOCSegmentation(VisionDataset):
                 mask = TF.hflip(mask)
             if self.rotate:
                 if random.random() > self.p_rotate:
-                    angle = np.random.randint(0,30)
-                    image = TF.rotate(image,angle=angle)
-                    mask = TF.rotate(mask,angle=angle)
+                    if random.random() > 0.5:
+                        angle = np.random.randint(0,30)
+                        image = TF.rotate(image,angle=angle)
+                        mask = TF.rotate(mask,angle=angle)
+                    else:
+                        angle = np.random.randint(330,360)
+                        image = TF.rotate(image,angle=angle)
+                        mask = TF.rotate(mask,angle=angle)
                     
 
         
