@@ -27,19 +27,6 @@ def get_voc_cst() -> (tuple,int):
 
 ### SAVE AND DATASETS UTILS FUNCTIONS
 
-def save_loss(model_name):
-    """
-        Save losses into numpy files.
-    """
-    save = os.path.join(SAVE_DIR,model_name+'_loss_train.npy')
-    np.save(save,np.array(loss_train))
-    save = os.path.join(SAVE_DIR,model_name+'_loss_test.npy')
-    np.save(save,np.array(loss_test))
-    save = os.path.join(SAVE_DIR,model_name+'_iou_train.npy')
-    np.save(save,np.array(iou_train))
-    save = os.path.join(SAVE_DIR,model_name+'_iou_test.npy')
-    np.save(save,np.array(iou_test))
-    
     
 class Split_Dataset(Dataset):
     """
@@ -260,7 +247,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
        transforme image.
     """
     x = x.to(device)
-    rot_x,new_angle = rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
+    rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
     softmax = nn.Softmax(dim=1)
     try:
         pred_x = model(x.to(device))['out'] # a prediction of the original images.
@@ -275,7 +262,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
     acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
-        class_pred = plot_equiv_mask(pred_droit.argmax(dim=1).detach().cpu()[0],pred_x.argmax(dim=1).detach().cpu()[0])
+        class_pred = plot_equiv_mask(pred_rot_x.argmax(dim=1).detach().cpu()[0],pred_x.argmax(dim=1).detach().cpu()[0])
         return loss,acc,class_pred
         
         

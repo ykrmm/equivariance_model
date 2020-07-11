@@ -71,3 +71,17 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
     
     return state
     
+def eval_model_all_angle(model,batch_size=1,device='cpu',num_classes=21):
+    l_angle = [10,20,30,330,340,350]
+    d_iou = {}
+    d_iou = d_iou.fromkeys(l_angle,None)
+    for angle in l_angle:
+        val_loader = get_dataset_val(batch_size,angle)
+        state = eval_model(model,val_loader,device=device,num_classes=num_classes)
+        d_iou[angle] = {'mIoU':state.metrics['mean IoU'],'Accuracy':state.metrics['accuracy'],\
+            'CE Loss':state.metrics['CE Loss']}
+    
+    return d_iou
+
+
+
