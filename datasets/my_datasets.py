@@ -142,7 +142,7 @@ class VOCSegmentation(VisionDataset):
         # Resize
         min_size = int((0.5 if self.train else 1.0) * self.size_img[0]) # Consider the x and y of the images is equal.
         max_size = int((2.0 if self.train else 1.0) * self.size_img[0])
-        size = random.randint(min_size,max_size)
+        size = random.randint(480,max_size)
         resize = T.Resize((size,size))
         image = resize(image)
         mask = resize(mask)
@@ -333,7 +333,7 @@ class SBDataset(VisionDataset):
         # Resize
         min_size = int((0.5 if self.train else 1.0) * self.size_img[0]) # Consider the x and y of the images is equal.
         max_size = int((2.0 if self.train else 1.0) * self.size_img[0])
-        size = random.randint(min_size,max_size)
+        size = random.randint(480,max_size)
         resize = T.Resize((size,size))
         image = resize(image)
         mask = resize(mask)
