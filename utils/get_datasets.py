@@ -17,7 +17,6 @@ import pickle
 import eval_train as ev
 import PIL
 from utils import * 
-from utils_dataset import *
 
 dataroot = '/data/voc2012'
 SAVE_DIR = '/data/model'
@@ -28,16 +27,29 @@ STD = [0.229, 0.224, 0.225]
 
 
 def get_dataset_val(batch_size,angle):
+    def to_tensor_target(img):
+        img = np.array(img)
+        # border
+        img[img==255] = 0 # border = background 
+        return torch.LongTensor(img)
+
+    def rotate_pil(img,fill=0):
+        img = TF.rotate(img,angle=angle,fill=fill)
+        return img
+
+    def hflip(img):
+        img = TF.hflip(img)
+        return img
     transform_input = transforms.Compose([
                                     transforms.Resize(size),
-                                    transforms.Lambda(rotate_pil(angle)),
+                                    transforms.Lambda(rotate_pil),
                                     transforms.ToTensor(),
                                     transforms.Normalize(mean=MEAN, std=STD),
                                         ])
 
     transform_mask = transforms.Compose([
                                     transforms.Resize(size),
-                                    transforms.Lambda(rotate_pil(angle)),
+                                    transforms.Lambda(rotate_pil),
                                     transforms.Lambda(to_tensor_target)
                                     ])
     val_dataset = dset.VOCSegmentation(dataroot,year='2012', image_set='val', download=True,

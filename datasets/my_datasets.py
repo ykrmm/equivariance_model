@@ -88,8 +88,8 @@ class VOCSegmentation(VisionDataset):
                  transforms=None,
                  mean=[0.485, 0.456, 0.406],
                  std=[0.229, 0.224, 0.225],
-                 size_img=(513,513),
-                 size_crop=(500,500),
+                 size_img=(520,520),
+                 size_crop=(480,480),
                  p=0.5,
                  p_rotate = 0.25,
                  rotate=False):
@@ -140,7 +140,10 @@ class VOCSegmentation(VisionDataset):
     
     def my_transform(self, image, mask):
         # Resize
-        resize = T.Resize(self.size_img)
+        min_size = int((0.5 if self.train else 1.0) * self.size_img)
+        max_size = int((2.0 if self.train else 1.0) * self.size_img)
+        size = random.randint(min_size,max_size)
+        resize = T.Resize(size)
         image = resize(image)
         mask = resize(mask)
 
@@ -259,8 +262,8 @@ class SBDataset(VisionDataset):
                  transforms=None,
                  mean=[0.485, 0.456, 0.406],
                  std=[0.229, 0.224, 0.225],
-                 size_img=(513,513),
-                 size_crop=(500,500),
+                 size_img=(520,520),
+                 size_crop=(480,480),
                  p=0.5,
                  p_rotate=0.25,
                  rotate=False):
@@ -328,7 +331,10 @@ class SBDataset(VisionDataset):
 
     def my_transform(self, image, mask):
         # Resize
-        resize = T.Resize(self.size_img)
+        min_size = int((0.5 if self.train else 1.0) * self.size_img)
+        max_size = int((2.0 if self.train else 1.0) * self.size_img)
+        size = random.randint(min_size,max_size)
+        resize = T.Resize(size)
         image = resize(image)
         mask = resize(mask)
 

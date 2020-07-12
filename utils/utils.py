@@ -5,7 +5,6 @@ from torch.utils.data.dataset import random_split
 import torch.nn as nn
 from matplotlib import colors
 import matplotlib.pyplot as plt
-from metric import *
 from scipy.ndimage.interpolation import rotate as scipy_rotate
 import pandas as pd
 
