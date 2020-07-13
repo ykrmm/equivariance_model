@@ -261,7 +261,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
     acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
-        class_pred = plot_equiv_mask(pred_rot_x.argmax(dim=1).detach().cpu()[0],pred_rot_x.argmax(dim=1).detach().cpu()[0])
+        class_pred = plot_equiv_mask(pred_rot.argmax(dim=1).detach().cpu()[0],pred_rot_x.argmax(dim=1).detach().cpu()[0])
         return loss,acc,class_pred
         
         
