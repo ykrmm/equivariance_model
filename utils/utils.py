@@ -257,11 +257,11 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
     
     pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Apply the rotation on the mask with the original input
     
-    loss = criterion(softmax(pred_rot.cpu()).log(),softmax(pred_rot_x.cpu())) #KL divergence between the two predictions
+    loss = criterion(softmax(pred_rot_x.cpu()).log(),softmax(pred_rot.cpu())) #KL divergence between the two predictions
     acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
-        class_pred = plot_equiv_mask(pred_rot_x.argmax(dim=1).detach().cpu()[0],pred_x.argmax(dim=1).detach().cpu()[0])
+        class_pred = plot_equiv_mask(pred_rot_x.argmax(dim=1).detach().cpu()[0],pred_rot_x.argmax(dim=1).detach().cpu()[0])
         return loss,acc,class_pred
         
         
