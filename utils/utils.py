@@ -247,6 +247,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
     """
     x = x.to(device)
     rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
+    logsoftmax = nn.LogSoftmax(dim=1) #LogSoftmax using instead of softmax then log.
     softmax = nn.Softmax(dim=1)
     try:
         pred_x = model(x.to(device))['out'] # a prediction of the original images.
@@ -257,7 +258,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
     
     pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Apply the rotation on the mask with the original input
     
-    loss = criterion(softmax(pred_rot_x.cpu()).log(),softmax(pred_rot.cpu())) #KL divergence between the two predictions
+    loss = criterion(logsoftmax(pred_rot_x.cpu()),softmax(pred_rot.cpu())) #KL divergence between the two predictions
     acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
