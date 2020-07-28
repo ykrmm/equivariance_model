@@ -239,11 +239,16 @@ def rotate_mask(mask,angle,reshape=False):
         mask_t = torch.FloatTensor(m)
         return mask_t
     
-def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDivLoss(reduction='mean'),device='cpu',plot=False):
+def compute_transformations_batch(x,model,angle,reshape=False,\
+                                  criterion=nn.KLDivLoss(reduction='mean'),KL=True,device='cpu',plot=False):
     """
        This function compute the equivariance loss with the rotation transformation for a batch of images. 
        It also give the accuracy between the output produce by the original image and the outpute produce by the 
        transforme image.
+       criterion : KL divergence / L1 Loss / MSE Loss
+       KL = True : to pass the predictions into logsoftmax and softmax before apply the criterion. 
+       plot = True for debug
+       reshape = True to allow to grow the images during the rotation to not loose the border
     """
     x = x.to(device)
     rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
@@ -254,11 +259,14 @@ def compute_transformations_batch(x,model,angle,reshape=False,criterion=nn.KLDiv
         pred_rot = model(rot_x.to(device))['out'] # a prediction of the rotated images.
     except:
         pred_x = model(x.to(device))
-        pred_rot = model(rot_x.to(device))
-    
+        pred_rot = model(rot_x.to(device))    
     pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Apply the rotation on the mask with the original input
-    
-    loss = criterion(logsoftmax(pred_rot_x.cpu()),softmax(pred_rot.cpu())) #KL divergence between the two predictions
+    if KL:
+        loss = criterion(logsoftmax(pred_rot_x.cpu()),softmax(pred_rot.cpu())) #KL divergence between the two predictions
+        loss = loss/ (pred_x.size()[2]*pred_x.size()[3])
+    else:
+        loss = criterion(pred_rot_x.cpu(),pred_rot.cpu())
+     
     acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
