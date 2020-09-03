@@ -46,7 +46,9 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
 
     def train_function(engine, batch):
         model.train()       
-        img, mask = batch[0].to(device), batch[1].to(device)       
+        img, mask = batch
+        img = img.to(device)
+        mask = mask.to(device)
         mask_pred = model(img)
         try:
             mask_pred = mask_pred['out'] 
@@ -55,7 +57,7 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
         loss = criterion(mask_pred, mask)
         loss.backward()
         optimizer.step()
-        return loss.item()
+        return mask_pred, mask #loss.item()
 
 
     train_engine = Engine(train_function)
@@ -73,7 +75,7 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
     return state
     
 def eval_model_all_angle(model,batch_size=1,device='cpu',num_classes=21):
-    l_angle = [10,20,30,330,340,350]
+    l_angle = [0,10,20,30,330,340,350]
     d_iou = {}
     d_iou = d_iou.fromkeys(l_angle,None)
     for angle in l_angle:
