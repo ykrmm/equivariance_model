@@ -352,9 +352,10 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'
     n = np.nanmean(n,axis=0)
     try:
         acc_classes = pd.Series(n,index=list(VOC_CLASSES))
-        print("Mean Pixel Accuracy between masks :",np.array(pixel_accuracy).mean(),\
-          "Loss Validation :",np.array(loss_test).mean())
-        return acc_classes
+        m_pix_acc = np.array(pixel_accuracy).mean()
+        m_loss_equiv = np.array(loss_test).mean()
+        print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
+        return m_pix_acc, m_loss_equiv
     except:
         print('fail dataframe')
         print("Mean Pixel Accuracy between masks :",np.array(pixel_accuracy).mean(),\
