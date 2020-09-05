@@ -320,7 +320,7 @@ def compute_scale_equiv_batch(x,model,size=(224,224), mode = 'nearest',\
         
     return loss,acc  
 
-def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'),\
+def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='batchmean'),\
                         nclass=21,device='cpu',Loss='KL',plot=True,angle_max=30,random_angle=False):
     """
         Function to compute the accuracy between the mask where the input had a geometric transformation 
@@ -330,11 +330,7 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'
         plot -> boolean : True plot the two masks side by side.
         Loss -> type of loss used : 'KL', 'CE' or None. 
         
-    """
-    n  = np.empty(21*len(val_loader)).reshape(len(val_loader),21)
-    n[:]  = np.NaN # array initialize with NaN in order to compute accuracy per class. 
-    
-    
+    """    
     loss_test = []
     pixel_accuracy = []
     model.eval()
@@ -345,25 +341,16 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'
             else:
                 angle = angle_max
 
-            loss_equiv,acc = compute_transformations_batch(x_unsup,model,angle,reshape=False,\
-                                                     criterion=criterion_unsupervised,Loss = Loss,\
+            loss_equiv,acc = compute_transformations_batch(x,model,angle,reshape=False,\
+                                                     criterion=criterion,Loss = Loss,\
                                                        device=device)
-            n[i][class_pred] = acc
             loss_test.append(loss_equiv)
             pixel_accuracy.append(acc)
-            #print('accuracy :',acc)
-    n = np.nanmean(n,axis=0)
-    try:
-        acc_classes = pd.Series(n,index=list(VOC_CLASSES))
-        m_pix_acc = np.array(pixel_accuracy).mean()
-        m_loss_equiv = np.array(loss_test).mean()
-        print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
-        return m_pix_acc, m_loss_equiv
-    except:
-        print('fail dataframe')
-        print("Mean Pixel Accuracy between masks :",np.array(pixel_accuracy).mean(),\
-          "Loss Validation :",np.array(loss_test).mean())
-        return n
+
+    m_pix_acc = np.array(pixel_accuracy).mean()
+    m_loss_equiv = np.array(loss_test).mean()
+    print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
+    return m_pix_acc, m_loss_equiv
         
 
 ### PLOT UTILS FUNCTIONS
