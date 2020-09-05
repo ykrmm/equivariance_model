@@ -321,13 +321,15 @@ def compute_scale_equiv_batch(x,model,size=(224,224), mode = 'nearest',\
     return loss,acc  
 
 def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'),\
-                        nclass=21,device='cpu',plot=True,angle_max=30,random_angle=False):
+                        nclass=21,device='cpu',Loss='KL',plot=True,angle_max=30,random_angle=False):
     """
         Function to compute the accuracy between the mask where the input had a geometric transformation 
         and the mask geometric transformed with the original input.
         random_angle -> boolean : If true a Random angle between 0 and angle_max is used for the evaluation.
         angle_max -> float : The max angle for rotate the input. 
         plot -> boolean : True plot the two masks side by side.
+        Loss -> type of loss used : 'KL', 'CE' or None. 
+        
     """
     n  = np.empty(21*len(val_loader)).reshape(len(val_loader),21)
     n[:]  = np.NaN # array initialize with NaN in order to compute accuracy per class. 
@@ -343,12 +345,13 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='mean'
             else:
                 angle = angle_max
 
-            loss_equiv,acc,class_pred = compute_transformations_batch(x,model,angle,reshape=False,\
-                                                         criterion=criterion,device=device,plot=plot)
+            loss_equiv,acc = compute_transformations_batch(x_unsup,model,angle,reshape=False,\
+                                                     criterion=criterion_unsupervised,Loss = Loss,\
+                                                       device=device)
             n[i][class_pred] = acc
             loss_test.append(loss_equiv)
             pixel_accuracy.append(acc)
-            print('accuracy :',acc)
+            #print('accuracy :',acc)
     n = np.nanmean(n,axis=0)
     try:
         acc_classes = pd.Series(n,index=list(VOC_CLASSES))
