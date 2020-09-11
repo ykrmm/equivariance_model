@@ -46,9 +46,7 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
 
     def train_function(engine, batch):
         model.train()       
-        img, mask = batch
-        img = img.to(device)
-        mask = mask.to(device)
+        img, mask = batch[0].to(device), batch[1].to(device)       
         mask_pred = model(img)
         try:
             mask_pred = mask_pred['out'] 
@@ -57,7 +55,7 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
         loss = criterion(mask_pred, mask)
         loss.backward()
         optimizer.step()
-        return mask_pred, mask #loss.item()
+        return loss.item()
 
 
     train_engine = Engine(train_function)
@@ -74,15 +72,25 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
     
     return state
     
-def eval_model_all_angle(model,batch_size=1,device='cpu',num_classes=21):
+def eval_model_all_angle(model,train=False,batch_size=1,device='cpu',num_classes=21):
+    """
+        Eval IoU with different angle in the input images.        
+        train : Bool -> Use train dataset or not. 
+    """
     l_angle = [0,10,20,30,330,340,350]
     d_iou = {}
     d_iou = d_iou.fromkeys(l_angle,None)
     for angle in l_angle:
-        val_loader = get_dataset_val(batch_size,angle)
-        state = eval_model(model,val_loader,device=device,num_classes=num_classes)
+        if not train:          
+            dataloader = get_dataset_val(batch_size,angle)
+        else:
+            dataloader = get_dataset_train_VOC(batch_size,angle)
+        state = eval_model(model,dataloader,device=device,num_classes=num_classes)
         d_iou[angle] = {'mIoU':state.metrics['mean IoU'],'Accuracy':state.metrics['accuracy'],\
             'CE Loss':state.metrics['CE Loss']}
+    for k in d_iou.keys():
+        print('Scores for datasets rotate by',k,'degrees:')
+        print('   mIoU',d_iou[k]['mIoU'],'Accuracy',d_iou[k]['Accuracy'],'CE Loss',d_iou[k]['CE Loss'])
     
     return d_iou
 
