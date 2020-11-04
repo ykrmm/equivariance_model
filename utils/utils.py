@@ -351,8 +351,18 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='batch
     m_loss_equiv = np.array(loss_test).mean()
     print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
     return m_pix_acc, m_loss_equiv
-        
 
+### MODEL UTILS FUNCTIONS         
+def deactivate_batchnorm(m):
+    """
+        Desactive batchnorm when using a torchvision model: model.apply(deactivate_batchnorm)
+    """
+    if isinstance(m, nn.BatchNorm2d):
+        m.reset_parameters()
+        m.eval()
+        with torch.no_grad():
+            m.weight.fill_(1.0)
+            m.bias.zero_()
 ### PLOT UTILS FUNCTIONS
 
 def get_cmap() -> colors.ListedColormap:
