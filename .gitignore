@@ -4,4 +4,4 @@ __pycache__
 utils/.vscode/
 *.vscode/
 .vscode
-.vscode/*
+.vscode/**.ipynb_checkpoints/
