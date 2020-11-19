@@ -137,5 +137,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Lightnings
+models/lightning_logs/
+lighting_logs/
+
 # Yannis folder 
 datasets/data

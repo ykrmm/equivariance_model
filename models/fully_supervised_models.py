@@ -28,7 +28,7 @@ class Fully_Supervised_SegNet(pl.LightningModule):
         self.save_hyperparameters()
         self.train_acc = pl.metrics.Accuracy()
         self.val_acc = pl.metrics.Accuracy()
-        self.train_cm = pl.metrics.classification.ConfustionMatrix(num_classes=21)
+        #self.train_cm = pl.metrics.classification.ConfusionMatrix(num_classes=21)
     def training_step(self, batch, batch_idx):
         x, mask = batch
         pred = self.segnet(x)["out"]
@@ -87,7 +87,8 @@ def main():
     # ------------
     train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', download=True,rotate=args.rotate)
     val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
-    train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',rotate=args.rotate)
+    train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',rotate=args.rotate)#,\
+        #download=True)
     train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
     dataloader_train = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,num_workers=args.nw,\
         pin_memory=args.pm,shuffle=True,drop_last=True)
