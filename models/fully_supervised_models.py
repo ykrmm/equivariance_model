@@ -74,6 +74,8 @@ def main():
     parser.add_argument('--model_name', default='FCN', type=str)
     parser.add_argument('--pretrained', default=False, type=bool,help="Use pretrained pytorch model")
     parser.add_argument('--rotate', default=False, type=bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--nw', default=1, type=int,help="Num workers for the data loader")
+    parser.add_argument('--pm', default=True, type=bool,help="Pin memory for the dataloader")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
     parser = pl.Trainer.add_argparse_args(parser)
