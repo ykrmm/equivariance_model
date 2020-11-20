@@ -74,10 +74,11 @@ def main():
     parser.add_argument('--model_name', default='FCN', type=str)
     parser.add_argument('--pretrained', default=False, type=bool,help="Use pretrained pytorch model")
     parser.add_argument('--rotate', default=False, type=bool,help="Use random rotation as data augmentation")
-    parser.add_argument('--nw', default=1, type=int,help="Num workers for the data loader")
+    parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=bool,help="Pin memory for the dataloader")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
+    parser.add_argument('--auto_lr', default=False,type=bool,help="Call Pytorch lightning to find the best value for the lr")
     parser = pl.Trainer.add_argparse_args(parser)
     parser = Fully_Supervised_SegNet.add_model_specific_args(parser)
     args = parser.parse_args()
@@ -104,7 +105,13 @@ def main():
     # ------------
     # training
     # ------------
-    trainer = pl.Trainer(fast_dev_run=True)
+    if args.auto_lr==True: 
+        trainer = pl.Trainer(gpus=1,auto_lr_find=True,max_epochs=args.n_epochs)
+        trainer.tune(model)
+        model.learning_rate
+    else:
+        trainer = pl.Trainer(gpus=1,max_epochs=args.n_epochs)
+        
     trainer.fit(model, dataloader_train, dataloader_val)
     # ------------
     # testing
