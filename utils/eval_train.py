@@ -88,7 +88,6 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
     iou_test = []
     accuracy_train = []
     accuracy_test = []
-    save_folder = U.create_save_directory(save_folder)
     for ep in range(n_epochs):
         print("EPOCH",ep)
         model.train()
@@ -123,7 +122,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
             save_model = model_name+'.pt'
             save = os.path.join(save_folder,save_model)
             torch.save(model,save)
-            
+
     U.save_curves(path=save_folder,loss_train=loss_train,iou_train=iou_train,accuracy_train=accuracy_train\
                                 ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
 

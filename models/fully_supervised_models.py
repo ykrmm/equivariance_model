@@ -29,6 +29,8 @@ def main():
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--pretrained', default=False, type=bool,help="Use pretrained pytorch model")
     parser.add_argument('--rotate', default=False, type=bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
+    parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=bool,help="Pin memory for the dataloader")
     parser.add_argument('--gpu', default=0, type=int,help="Wich gpu to select for training")
@@ -39,11 +41,15 @@ def main():
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
     parser.add_argument('--save_all_ep', default=False, type=bool,help="If true it'll save the model every epoch in save_dir")
-    
+    args = parser.parse_args()
+    # ------------
+    # save
+    # ------------
+    save_dir = U.create_save_directory(args.save_dir)
+    U.save_hparams(args,save_dir)
     # ------------
     # model
     # ------------
-    args = parser.parse_args()
     
     if args.model.upper()=='FCN':
         model = models.segmentation.fcn_resnet101(pretrained=args.pretrained)
@@ -54,9 +60,13 @@ def main():
     # ------------
     # data
     # ------------
-    train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', download=True,rotate=args.rotate)
+    if args.size_img < args.size_crop:
+        raise Exception('Cannot have size of input images less than size of crop')
+    size_img = (args.size_image,args.size_image)
+    size_crop = (args.size_crop,args.size_crop)
+    train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
     val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
-    train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',rotate=args.rotate)
+    train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',rotate=args.rotate,size_img=size_img,size_crop=size_crop)
     # Concatene dataset
     train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
     if args.split:
@@ -76,8 +86,8 @@ def main():
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd)
 
     ev.train_fully_supervised(model=model,n_epochs=args.n_epochs,train_loader=dataloader_train,val_loader=dataloader_val,\
-        criterion=criterion,optimizer=optimizer,save_folder=args.save_dir,model_name=args.model_name,benchmark=args.benchmark,\
-            save_all_ep=ars.save_all_ep,device=device,num_classes=21)
+        criterion=criterion,optimizer=optimizer,save_folder=save_dir,model_name=args.model_name,benchmark=args.benchmark,\
+            save_all_ep=args.save_all_ep,device=device,num_classes=21)
     
 
 

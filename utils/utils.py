@@ -9,6 +9,7 @@ from scipy.ndimage.interpolation import rotate as scipy_rotate
 import pandas as pd
 import torch.nn.functional as F
 from string import digits
+import sys
 import os
 
 
@@ -456,3 +457,13 @@ def save_curves(path,**kwargs):
     for name,l in kwargs.items():
         curve_name = os.path.join(path,str(name)+'.npy')
         np.save(curve_name,np.array(l))
+
+def save_hparams(args,path):
+    """
+        Save hyperparameters of a run in a hparam.txt file
+    """
+    hparam = 'hparam.txt'
+    fi = os.path.join(path,hparam)
+    with open(fi,'w') as f:
+        print(args,file=f)
+    print('Hyper parameters succesfully saved in',fi)
