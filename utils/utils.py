@@ -444,7 +444,10 @@ def create_save_directory(path_save):
     """
     files = os.listdir(path_save)
     n = [int(i) for i in files if i[0] in digits]
-    d = max(n)+1
+    if len(n)==0:
+        d=0
+    else:
+        d = max(n)+1
     new_path = os.path.join(path_save,str(d)) #Return new path to save during training
     os.mkdir(new_path)
     return new_path

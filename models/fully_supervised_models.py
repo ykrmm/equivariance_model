@@ -48,6 +48,11 @@ def main():
     save_dir = U.create_save_directory(args.save_dir)
     U.save_hparams(args,save_dir)
     # ------------
+    # device
+    # ------------
+    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    print("device :",device)
+    # ------------
     # model
     # ------------
     
@@ -57,12 +62,13 @@ def main():
         model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained)
     else:
         raise Exception('model must be "FCN" or "DLV3"')
+    model.to(device)
     # ------------
     # data
     # ------------
     if args.size_img < args.size_crop:
         raise Exception('Cannot have size of input images less than size of crop')
-    size_img = (args.size_image,args.size_image)
+    size_img = (args.size_img,args.size_img)
     size_crop = (args.size_crop,args.size_crop)
     train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
     val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
@@ -76,8 +82,7 @@ def main():
                                                shuffle=True,drop_last=True)
     dataloader_val = torch.utils.data.DataLoader(val_dataset_VOC,num_workers=args.nw,pin_memory=args.pm, batch_size=args.batch_size)
     # Decide which device we want to run on
-    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
-    print("device :",device)
+    
 
     # ------------
     # training
