@@ -1,1 +1,1 @@
-python3 fully_supervised_models.py --batch_size 8 --auto_select_gpu True --nb_gpu 2 --n_epochs 5 --dataroot_voc /local/data/karmim/voc2012 --dataroot_sbd /local/data/karmim/sbd --auto_lr True
+python3  fully_supervised_models.py --auto_lr False --learning_rate 0.0001 --auto_batch False --batch_size 8 --nw 4 --auto_select_gpu True --nb_gpu 0 --accel ddp --n_epochs 5 --dataroot_voc ~/data/voc2012 --dataroot_sbd ~/data/sbd 

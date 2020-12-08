@@ -18,7 +18,7 @@ import eval_train as ev
 import PIL
 from utils import * 
 
-dataroot = '/data/voc2012'
+dataroot_voc = '~/data/voc2012'
 SAVE_DIR = '/data/model'
 SIZE = (520,520)
 MEAN = [0.485, 0.456, 0.406]
@@ -52,7 +52,7 @@ def get_dataset_val(batch_size,angle):
                                     transforms.Lambda(rotate_pil),
                                     transforms.Lambda(to_tensor_target)
                                     ])
-    val_dataset = dset.VOCSegmentation(dataroot,year='2012', image_set='val', download=True,
+    val_dataset = dset.VOCSegmentation(dataroot_voc,year='2012', image_set='val', download=True,
                                      transform= transform_input,
                                      target_transform= transform_mask)
     
@@ -86,7 +86,7 @@ def get_dataset_train_VOC(batch_size,angle):
                                     transforms.Lambda(rotate_pil),
                                     transforms.Lambda(to_tensor_target)
                                     ])
-    train_dataset = dset.VOCSegmentation(dataroot,year='2012', image_set='train', download=True,
+    train_dataset = dset.VOCSegmentation(dataroot_voc,year='2012', image_set='train', download=True,
                                      transform= transform_input,
                                      target_transform= transform_mask)
     

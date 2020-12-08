@@ -13,7 +13,7 @@ import torch.utils.data as tud
 
 class Fully_Supervised_SegNet(pl.LightningModule):
 
-    def __init__(self,model_name='FCN',pretrained=False,learning_rate = 10e-4,moment=0.9,wd=2e-4,args=None):
+    def __init__(self,model_name='FCN',pretrained=False,learning_rate =10e-4,moment=0.9,wd=2e-4,batch_size=5,args=None):
         """
             model type FCN or DLV3 
             pretrained : load a pretrained model of pytorch if true 
@@ -25,6 +25,7 @@ class Fully_Supervised_SegNet(pl.LightningModule):
             self.segnet = models.segmentation.deeplabv3_resnet101(pretrained=pretrained)
         else:
             raise Exception('model must be "FCN" or "DLV3"')
+        self.learning_rate=learning_rate
         self.save_hyperparameters()
         self.train_acc = pl.metrics.Accuracy()
         self.val_acc = pl.metrics.Accuracy()
@@ -52,23 +53,23 @@ class Fully_Supervised_SegNet(pl.LightningModule):
             momentum=self.hparams.moment,weight_decay=self.hparams.wd)
         return optimizer
 
-    @pl.data_loader
+    #@pl.data_loader
     def train_dataloader(self):
         train_dataset_VOC = mdset.VOCSegmentation(self.hparams.args.dataroot_voc,year='2012', \
             image_set='train',rotate=self.hparams.args.rotate)
         train_dataset_SBD = mdset.SBDataset(self.hparams.args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
             rotate=self.hparams.args.rotate)#,download=True)
         train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
-        dataloader_train = torch.utils.data.DataLoader(train_dataset, batch_size=self.hparams.args.batch_size,\
+        dataloader_train = torch.utils.data.DataLoader(train_dataset, batch_size=self.hparams.batch_size,\
             num_workers=self.hparams.args.nw,pin_memory=self.hparams.args.pm,shuffle=True,drop_last=True)
         return dataloader_train 
 
 
-    @pl.data_loader
+    #@pl.data_loader
     def val_dataloader(self):
-        val_dataset_VOC = mdset.VOCSegmentation(self.hparams.args.dataroot_voc,year='2012', image_set='val')#, download=True)
+        val_dataset_VOC = mdset.VOCSegmentation(self.hparams.args.dataroot_voc,year='2012', image_set='val', download=True)
         dataloader_val = torch.utils.data.DataLoader(val_dataset_VOC,num_workers=self.hparams.args.nw,\
-            pin_memory=self.hparams.args.pm,batch_size=self.hparams.args.batch_size)
+            pin_memory=self.hparams.args.pm,batch_size=self.hparams.batch_size)
         return dataloader_val
 
     @staticmethod
@@ -89,9 +90,10 @@ def main():
     parser.add_argument('--batch_size', default=5, type=int)
     parser.add_argument('--auto_batch', default=False, type=bool, help="Auto scale of the batchsize")
     parser.add_argument('--auto_select_gpu', default=False, type=bool, help="If true: select available gpus")
-    parser.add_argument('--nb_gpu', default=1, type=int, help="Number of gpus to use")
-    parser.add_argument('--accelerator',default=None,type=str, help="The accelerator backend to use: 'dp' 'ddp' 'ddp_cpu' or 'ddp2'")
+    parser.add_argument('--nb_gpu', nargs='+',type=int, help="GPUS to use")
+    parser.add_argument('--accel',default='ddp',type=str, help="The accelerator backend to use: dp ddp ddp_cpu or ddp2")
     parser.add_argument('--n_epochs', default=10, type=int)
+    parser.add_argument('--auto_lr', default=False,type=bool,help="Call Pytorch lightning to find the best value for the lr")
     parser.add_argument('--model_name', default='FCN', type=str)
     parser.add_argument('--pretrained', default=False, type=bool,help="Use pretrained pytorch model")
     parser.add_argument('--rotate', default=False, type=bool,help="Use random rotation as data augmentation")
@@ -99,7 +101,7 @@ def main():
     parser.add_argument('--pm', default=True, type=bool,help="Pin memory for the dataloader")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
-    parser.add_argument('--auto_lr', default=False,type=bool,help="Call Pytorch lightning to find the best value for the lr")
+    
     parser = pl.Trainer.add_argparse_args(parser)
     parser = Fully_Supervised_SegNet.add_model_specific_args(parser)
     args = parser.parse_args()
@@ -113,14 +115,24 @@ def main():
     # ------------
     # training
     # ------------
-    if args.auto_lr==True: 
-        trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accelerator,auto_scale_batch_size=args.auto_batch,\
+    benchmark = True
+    if args.auto_lr==True:
+        if args.auto_batch is True:
+             trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accel,benchmark=benchmark,auto_scale_batch_size='binsearch',\
             auto_select_gpus=args.auto_select_gpu,auto_lr_find=True,max_epochs=args.n_epochs)
+        if args.auto_batch is False:
+            
+            trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accel,benchmark=benchmark,auto_scale_batch_size=None,\
+                auto_select_gpus=args.auto_select_gpu,auto_lr_find=True,max_epochs=args.n_epochs)
         trainer.tune(model)
         model.learning_rate
     else:
-        trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accelerator,auto_scale_batch_size=args.auto_batch,\
-            auto_select_gpus=args.auto_select_gpu,max_epochs=args.n_epochs)
+        if args.auto_batch is True:
+            trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accel,benchmark=benchmark,auto_scale_batch_size='binsearch',\
+                auto_select_gpus=args.auto_select_gpu,max_epochs=args.n_epochs)
+        if args.auto_batch is False:
+            trainer = pl.Trainer(gpus=args.nb_gpu,accelerator=args.accel,benchmark=benchmark,auto_scale_batch_size=None,\
+                auto_select_gpus=args.auto_select_gpu,max_epochs=args.n_epochs)
         
     trainer.fit(model)
     # ------------

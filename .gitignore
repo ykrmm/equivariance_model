@@ -143,3 +143,7 @@ lighting_logs/
 
 # Yannis folder 
 datasets/data
+saved_model/
+*nohup.out*
+*/nohup.out
+
