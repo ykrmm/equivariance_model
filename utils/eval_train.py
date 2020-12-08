@@ -62,12 +62,12 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
         loss = criterion(mask_pred, mask)
         loss.backward()
         optimizer.step()
-        return loss.item(),mask_pred, mask
+        return mask_pred, mask
     train_engine = Engine(train_function)
-    cm = ConfusionMatrix(num_classes=num_classes,output_transform=output_transform)
+    cm = ConfusionMatrix(num_classes=num_classes)#,output_transform=output_transform)
     mIoU(cm).attach(train_engine, 'mean IoU')   
-    Accuracy(output_transform=output_transform).attach(train_engine, "accuracy")
-    Loss(loss_fn=nn.CrossEntropyLoss(),output_transform=output_transform).attach(train_engine, "CE Loss")
+    Accuracy().attach(train_engine, "accuracy")
+    Loss(loss_fn=nn.CrossEntropyLoss()).attach(train_engine, "CE Loss")
     state = train_engine.run(train_loader)
     #print("mIoU :",state.metrics['mean IoU'])
     #print("Accuracy :",state.metrics['accuracy'])
