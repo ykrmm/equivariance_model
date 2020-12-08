@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from scipy.ndimage.interpolation import rotate as scipy_rotate
 import pandas as pd
 import torch.nn.functional as F
+from string import digits
+import os
 
 
 ### CONSTANT
@@ -433,4 +435,24 @@ def plot_equiv_mask(rot_mask,mask,cmap=None):
     return ind_class
         
         
-    
+#### SAVING FUNCTIONS 
+
+def create_save_directory(path_save):
+    """
+        This function returned the path to a unique folder for each model running. 
+    """
+    files = os.listdir(path_save)
+    n = [int(i) for i in files if i[0] in digits]
+    d = max(n)+1
+    new_path = os.path.join(path_save,str(d)) #Return new path to save during training
+    os.mkdir(new_path)
+    return new_path
+
+def save_curves(path,**kwargs):
+    """
+        path : path to save all the curves
+        **kwargs : must be name_of_the_list = list
+    """
+    for name,l in kwargs.items():
+        curve_name = os.path.join(path,str(name)+'.npy')
+        np.save(curve_name,np.array(l))

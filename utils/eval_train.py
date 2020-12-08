@@ -3,9 +3,11 @@ from ignite.engine.engine import Engine
 import torch 
 import torch.nn as nn
 import numpy as np
-from utils import * 
+import utils as U
+import get_datasets as gd
 from matplotlib import colors
-from get_datasets import *
+import os
+
 
 CMAP  = colors.ListedColormap(['black','green','blue','yellow','pink','orange','maroon','darkorange'\
                                  ,'skyblue','chocolate','azure','hotpink','tan','gold','silver','navy','white'\
@@ -41,9 +43,10 @@ def eval_model(model,val_loader,device='cpu',num_classes=21):
     
     return state
 
-def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',num_classes=21):
-
-
+def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',num_classes=21):
+    """
+        A step of fully supervised segmentation model training.
+    """
     def train_function(engine, batch):
         model.train()       
         img, mask = batch[0].to(device), batch[1].to(device)       
@@ -56,8 +59,6 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
         loss.backward()
         optimizer.step()
         return loss.item()
-
-
     train_engine = Engine(train_function)
     cm = ConfusionMatrix(num_classes=num_classes)
     mIoU(cm).attach(train_engine, 'mean IoU')   
@@ -71,7 +72,62 @@ def train_model_supervised(model,train_loader,criterion,optimizer,device='cpu',n
     #print("CE Loss :",state.metrics['CE Loss'])
     
     return state
-    
+
+def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,save_folder,model_name,benchmark=False,save_all_ep=True,\
+                        device='cpu',num_classes=21):
+    """
+        A complete training of fully supervised model. 
+        save_folder : Path to save the model, the courb of losses,metric...
+        benchmark : enable or disable backends.cudnn 
+        save_all_ep : if True, the model is saved at each epoch in save_folder
+    """
+    torch.backends.cudnn.benchmark=benchmark
+    loss_test = []
+    loss_train = []
+    iou_train = []
+    iou_test = []
+    accuracy_train = []
+    accuracy_test = []
+    save_folder = U.create_save_directory(save_folder)
+    for ep in range(n_epochs):
+        print("EPOCH",ep)
+        model.train()
+        state = step_train_supervised(model,train_loader=train_loader,criterion=criterion,\
+            optimizer=optimizer,device=device,num_classes=num_classes)
+        iou = state.metrics['mean IoU']
+        acc = state.metrics['accuracy']
+        loss = state.metrics['CE Loss'] 
+        loss_train.append(loss)
+        iou_train.append(iou)
+        accuracy_train.append(acc)
+        print('TRAIN - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+
+        #Eval model
+        model.eval()
+        with torch.no_grad():
+            state = eval_model(model,val_loader,device=device,num_classes=num_classes)
+            iou = state.metrics['mean IoU']
+            acc = state.metrics['accuracy']
+            loss = state.metrics['CE Loss'] 
+            loss_test.append(loss)
+            iou_test.append(iou)
+            accuracy_test.append(acc)
+            print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+        
+        ## Save model
+        if save_all_ep:
+            save_model = model_name+'_ep'+str(ep)+'.pt'
+            save = os.path.join(save_folder,save_model)
+            torch.save(model,save)
+        else:
+            save_model = model_name+'.pt'
+            save = os.path.join(save_folder,save_model)
+            torch.save(model,save)
+            
+    U.save_curves(path=save_folder,loss_train=loss_train,iou_train=iou_train,accuracy_train=accuracy_train\
+                                ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
+
+
 def eval_model_all_angle(model,train=False,batch_size=1,device='cpu',num_classes=21):
     """
         Eval IoU with different angle in the input images.        
@@ -82,9 +138,9 @@ def eval_model_all_angle(model,train=False,batch_size=1,device='cpu',num_classes
     d_iou = d_iou.fromkeys(l_angle,None)
     for angle in l_angle:
         if not train:          
-            dataloader = get_dataset_val(batch_size,angle)
+            dataloader = gd.get_dataset_val(batch_size,angle)
         else:
-            dataloader = get_dataset_train_VOC(batch_size,angle)
+            dataloader = gd.get_dataset_train_VOC(batch_size,angle)
         state = eval_model(model,dataloader,device=device,num_classes=num_classes)
         d_iou[angle] = {'mIoU':state.metrics['mean IoU'],'Accuracy':state.metrics['accuracy'],\
             'CE Loss':state.metrics['CE Loss']}
