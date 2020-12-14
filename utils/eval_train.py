@@ -1,5 +1,9 @@
+import ignite.distributed as idist
+from ignite.contrib.engines import common
+from ignite.contrib.handlers import ProgressBar
+from ignite.engine import Engine, Events, create_supervised_evaluator
+from ignite.metrics import Accuracy
 from ignite.metrics import ConfusionMatrix, mIoU,Accuracy,Loss
-from ignite.engine.engine import Engine
 import torch 
 import torch.nn as nn
 import numpy as np
@@ -7,7 +11,67 @@ import utils as U
 import get_datasets as gd
 from matplotlib import colors
 import os
+def create_trainer(model, optimizer, criterion, lr_scheduler, config):
 
+    def train_step(engine, batch):
+        x, y = batch[0].to(idist.device()), batch[1].to(idist.device())
+        model.train()
+        y_pred = model(x)
+        loss = criterion(y_pred, y)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        return loss.item()
+
+    # Define trainer engine
+    trainer = Engine(train_step)
+
+    if idist.get_rank() == 0:
+        # Add any custom handlers
+        @trainer.on(Events.ITERATION_COMPLETED(every=200))
+        def save_checkpoint():
+            fp = Path(config.get("output_path", "output")) / "checkpoint.pt"
+            torch.save(model.state_dict(), fp)
+
+        # Add progress bar showing batch loss value
+        ProgressBar().attach(trainer, output_transform=lambda x: {"batch loss": x})
+
+    return trainer
+
+
+# slide 2 ####################################################################
+
+
+def training(local_rank, config):
+
+    # Setup dataflow and
+    train_loader, val_loader = get_dataflow(config)
+    model, optimizer, criterion, lr_scheduler = initialize(config)
+
+    # Setup model trainer and evaluator
+    trainer = create_trainer(model, optimizer, criterion, lr_scheduler, config)
+    evaluator = create_supervised_evaluator(model, metrics={"accuracy": Accuracy()}, device=idist.device())
+
+    # Run model evaluation every 3 epochs and show results
+    @trainer.on(Events.EPOCH_COMPLETED(every=3))
+    def evaluate_model():
+        state = evaluator.run(val_loader)
+        if idist.get_rank() == 0:
+            print(state.metrics)
+
+    # Setup tensorboard experiment tracking
+    if idist.get_rank() == 0:
+        tb_logger = common.setup_tb_logging(
+            config.get("output_path", "output"), trainer, optimizer, evaluators={"validation": evaluator},
+        )
+
+    trainer.run(train_loader, max_epochs=config.get("max_epochs", 3))
+
+    if idist.get_rank() == 0:
+        tb_logger.close()
 
 CMAP  = colors.ListedColormap(['black','green','blue','yellow','pink','orange','maroon','darkorange'\
                                  ,'skyblue','chocolate','azure','hotpink','tan','gold','silver','navy','white'\
@@ -47,13 +111,13 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
     """
         A step of fully supervised segmentation model training.
     """
-    def output_transform(output):
-        output = output[1],output[2]
-        return output
 
     def train_function(engine, batch):
+        optimizer.zero_grad()
         model.train()       
-        img, mask = batch[0].to(device), batch[1].to(device)       
+        img, mask = batch   
+        img = img.to(device)
+        mask = mask.to(device)    
         mask_pred = model(img)
         try:
             mask_pred = mask_pred['out'] 
