@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import utils as U
+import random 
 import get_datasets as gd
 from matplotlib import colors
 import os
@@ -191,6 +192,128 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
 
     U.save_curves(path=save_folder,loss_train=loss_train,iou_train=iou_train,accuracy_train=accuracy_train\
                                 ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
+
+
+
+
+def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
+                        optimizer,gamma,Loss,device,angle_max=30):
+    """
+        A training epoch for rotational equivariance using for semantic segmentation
+    """
+    l_loss_equiv = []
+    l_loss_sup = []
+    l_loss = []
+    equiv_acc = [] # Equivariance accuracy btwn the mask of the input rotated image and the mask of non rotated image
+    model.train()
+    for batch_sup,batch_unsup in zip(train_loader_sup,train_loader_equiv):
+        optimizer.zero_grad()
+        if random.random() > 0.5: # I use this to rotate the image on the left and on the right during training.
+            angle = np.random.randint(0,angle_max)
+        else:
+            angle = np.random.randint(360-angle_max,360)
+        x_unsup,_ = batch_unsup
+        loss_equiv,acc = U.compute_transformations_batch(x_unsup,model,angle,reshape=False,\
+                                                     criterion=criterion_unsupervised,Loss = Loss,\
+                                                       device=device)
+        x,mask = batch_sup
+        x = x.to(device)
+        mask = mask.to(device)
+        pred = model(x)["out"]
+        loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
+        loss_sup = criterion_supervised(pred,mask)
+        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
+        loss.backward()
+        optimizer.step()
+        l_loss.append(loss)
+        l_loss_equiv.append(loss_equiv)
+        l_loss_sup.append(loss_sup)
+        equiv_acc.append(acc)
+    state = eval_model(model,train_loader_equiv,device=device,num_classes=21)
+    iou = state.metrics['mean IoU']
+    accuracy = state.metrics['accuracy']
+    d = {'loss':np.array(l_loss).mean(),'loss_equiv':np.array(l_loss_equiv).mean(),\
+        'loss_sup':np.array(l_loss_sup).mean(),'equiv_acc':np.array(equiv_acc).mean(),'iou_train':iou,'accuracy_train':accuracy}
+    return d
+
+def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_loader,criterion_supervised,optimizer,scheduler,\
+        Loss,gamma,batch_size,save_folder,model_name,benchmark=False,angle_max=30,size_img=520,\
+        eval_every=5,save_all_ep=True,dataroot_voc='~/data/voc2012',save_best=False, device='cpu',num_classes=21):
+    """
+        A complete training of rotation equivariance supervised model. 
+        save_folder : Path to save the model, the courb of losses,metric...
+        benchmark : enable or disable backends.cudnn 
+        Loss : Loss for unsupervised training 'KL' 'CE' 'L1' or 'MSE'
+        gamma : float btwn [0,1] -> Balancing two losses loss_sup*gamma + (1-gamma)*loss_unsup
+        save_all_ep : if True, the model is saved at each epoch in save_folder
+        scheduler : if True, the model will apply a lr scheduler during training
+        eval_every : Eval Model with different input image angle every n step
+        size_img : size of image during evaluation
+        angle_max : max angle rotation for input images
+    """
+    torch.backends.cudnn.benchmark=benchmark
+    if scheduler:
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: (1 - x / (len(train_loader_sup) * n_epochs)) ** 0.9)
+    criterion_unsupervised = U.get_criterion(Loss)
+    iou_train = []
+    iou_test = []
+    combine_loss_train = []
+    combine_loss_test = []
+    loss_train_unsup = []
+    loss_train_sup = []
+    loss_test_unsup = []
+    loss_test_sup = []
+    equiv_accuracy_train = []
+    equiv_accuracy_test = []
+    accuracy_test = []
+    accuracy_train = []
+    train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
+                                                     shuffle=True,drop_last=True)
+    train_loader_equiv.batch_size
+    for ep in range(n_epochs):
+        print("EPOCH",ep)
+        # TRAINING
+        d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
+                        optimizer,gamma,Loss,device,angle_max=30)
+        if scheduler:
+            lr_scheduler.step()
+        combine_loss_train.append(d['loss'])
+        loss_train_unsup.append(d['loss_equiv'])
+        loss_train_sup.append(d['loss_sup'])
+        equiv_accuracy_train.append(d['equiv_acc'])
+        iou_train.append(d['iou_train'])
+        accuracy_train.append(d['accuracy_train'])
+        print('TRAIN - EP:',ep,'iou:',d['iou_train'],'Accuracy:',d['accuracy_train'],'Loss sup:',d['loss_sup'],\
+            'Loss equiv:',d['loss_equiv'],'Combine Loss:',d['loss'],'Equivariance Accuracy:',d['equiv_acc'],)
+        # EVALUATION 
+        model.eval()
+        with torch.no_grad():
+            state = eval_model(model,val_loader,device=device,num_classes=num_classes)
+            iou = state.metrics['mean IoU']
+            acc = state.metrics['accuracy']
+            loss = state.metrics['CE Loss'] 
+            loss_test_sup.append(loss)
+            iou_test.append(iou)
+            accuracy_test.append(acc)
+            print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+            if ep%eval_every==0: # Eval loss equiv and equivariance accuracy for the validation dataset
+                equiv_acc, m_loss_equiv = U.eval_accuracy_equiv(model,val_loader,criterion=criterion_unsupervised,\
+                                nclass=21,device=device,Loss=Loss,plot=False,angle_max=angle_max,random_angle=False)
+                loss_test_unsup.append(m_loss_equiv)
+                equiv_accuracy_test.append(equiv_acc)    
+                print('VOC Dataset Train')
+                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=True,device=device)
+                print('VOC Dataset Val')
+                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=False,device=device)
+                ## Save model
+                U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
+
+    U.save_curves(path=save_folder,combine_loss_train=combine_loss_train,loss_train_sup=loss_train_sup,\
+    loss_train_unsup=loss_train_unsup,iou_train=iou_train,accuracy_train=accuracy_train,equiv_accuracy_train=equiv_accuracy_train,\
+    combine_loss_test=combine_loss_test,loss_test_unsup=loss_test_unsup,equiv_accuracy_test=equiv_accuracy_test,\
+    loss_test_sup= loss_test_sup,iou_test=iou_test,accuracy_test=accuracy_test)
 
 
 def eval_model_all_angle(model,size,dataroot_voc,train=False,batch_size=1,device='cpu',num_classes=21):

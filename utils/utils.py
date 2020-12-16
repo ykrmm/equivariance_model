@@ -28,6 +28,11 @@ def get_voc_cst() -> (tuple,int):
     
     return VOC_CLASSES,NUM_CLASSES
 
+def get_criterion(key:str) -> dict:
+    d = {'CE':nn.CrossEntropyLoss(ignore_index=21),'KL':nn.KLDivLoss(reduction = 'batchmean', log_target = False),\
+        'L1':nn.L1Loss(reduction='mean'),'MSE':nn.MSELoss()}
+    return d[key]
+
 ### TYPE 
 def str2bool(v):
     if isinstance(v, bool):
