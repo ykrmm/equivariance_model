@@ -11,6 +11,7 @@ import utils as U
 import get_datasets as gd
 from matplotlib import colors
 import os
+"""
 def create_trainer(model, optimizer, criterion, lr_scheduler, config):
 
     def train_step(engine, batch):
@@ -73,10 +74,10 @@ def training(local_rank, config):
     if idist.get_rank() == 0:
         tb_logger.close()
 
-CMAP  = colors.ListedColormap(['black','green','blue','yellow','pink','orange','maroon','darkorange'\
-                                 ,'skyblue','chocolate','azure','hotpink','tan','gold','silver','navy','white'\
-                                ,'olive','beige','brown','royalblue','violet'])
 
+"""
+
+##############
 
 def eval_model(model,val_loader,device='cpu',num_classes=21):
 
@@ -139,15 +140,20 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
     
     return state
 
-def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,save_folder,model_name,benchmark=False,save_all_ep=True,\
-                        device='cpu',num_classes=21):
+def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,scheduler,\
+        save_folder,model_name,benchmark=False,save_all_ep=True, save_best=False, device='cpu',num_classes=21):
     """
         A complete training of fully supervised model. 
         save_folder : Path to save the model, the courb of losses,metric...
         benchmark : enable or disable backends.cudnn 
         save_all_ep : if True, the model is saved at each epoch in save_folder
+        scheduler : if True, the model will apply a lr scheduler during training
     """
     torch.backends.cudnn.benchmark=benchmark
+    if scheduler:
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: (1 - x / (len(train_loader) * n_epochs)) ** 0.9)
     loss_test = []
     loss_train = []
     iou_train = []
@@ -166,7 +172,8 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
         iou_train.append(iou)
         accuracy_train.append(acc)
         print('TRAIN - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
-
+        if scheduler:
+            lr_scheduler.step()
         #Eval model
         model.eval()
         with torch.no_grad():
@@ -180,20 +187,13 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
             print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
         
         ## Save model
-        if save_all_ep:
-            save_model = model_name+'_ep'+str(ep)+'.pt'
-            save = os.path.join(save_folder,save_model)
-            torch.save(model,save)
-        else:
-            save_model = model_name+'.pt'
-            save = os.path.join(save_folder,save_model)
-            torch.save(model,save)
+        U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
 
     U.save_curves(path=save_folder,loss_train=loss_train,iou_train=iou_train,accuracy_train=accuracy_train\
                                 ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
 
 
-def eval_model_all_angle(model,train=False,batch_size=1,device='cpu',num_classes=21):
+def eval_model_all_angle(model,size,train=False,batch_size=1,device='cpu',num_classes=21):
     """
         Eval IoU with different angle in the input images.        
         train : Bool -> Use train dataset or not. 

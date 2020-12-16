@@ -146,4 +146,4 @@ datasets/data
 saved_model/
 *nohup.out*
 */nohup.out
-
+*.out

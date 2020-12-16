@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import argparse
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataset import random_split
 import torch.nn as nn
@@ -26,6 +27,17 @@ NUM_CLASSES = len(VOC_CLASSES) + 1
 def get_voc_cst() -> (tuple,int):
     
     return VOC_CLASSES,NUM_CLASSES
+
+### TYPE 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 ### SAVE AND DATASETS UTILS FUNCTIONS
@@ -470,3 +482,26 @@ def save_hparams(args,path):
     with open(fi,'w') as f:
         print(args,file=f)
     print('Hyper parameters succesfully saved in',fi)
+
+def save_model(model,save_all_ep,save_best,save_folder,model_name,ep=None,iou=None,iou_test=None):
+    if save_all_ep:
+        if ep is None:
+            raise Exception('Saving all epochs required to have the epoch iteration.')
+        save_model = model_name+'_ep'+str(ep)+'.pt'
+        save = os.path.join(save_folder,save_model)
+        torch.save(model,save)
+    elif save_best:
+        if iou is None or iou_test is None:
+            raise Exception('Saving best model required to pass the current IoU and the list of IoU in argument.')
+        if len(iou_test)<=1:
+            save_model = model_name+'.pt'
+            save = os.path.join(save_folder,save_model)
+            torch.save(model,save)
+        if iou > max(iou_test[:len(iou_test)-1]):
+            save_model = model_name+'.pt'
+            save = os.path.join(save_folder,save_model)
+            torch.save(model,save)
+    else:
+        save_model = model_name+'.pt'
+        save = os.path.join(save_folder,save_model)
+        torch.save(model,save)
