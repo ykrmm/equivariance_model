@@ -16,17 +16,14 @@ import matplotlib.pyplot as plt
 import pickle
 import eval_train as ev
 import PIL
-from utils import * 
+import utils as U
 
-dataroot_voc = '~/data/voc2012'
-SAVE_DIR = '/data/model'
-SIZE = (520,520)
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 
 
 
-def get_dataset_val(batch_size,angle):
+def get_dataset_val(batch_size,angle,size,dataroot_voc):
     def to_tensor_target(img):
         img = np.array(img)
         # border
@@ -37,18 +34,15 @@ def get_dataset_val(batch_size,angle):
         img = TF.rotate(img,angle=angle,fill=fill)
         return img
 
-    def hflip(img):
-        img = TF.hflip(img)
-        return img
     transform_input = transforms.Compose([
-                                    transforms.Resize(SIZE),
+                                    transforms.Resize(size),
                                     transforms.Lambda(rotate_pil),
                                     transforms.ToTensor(),
                                     transforms.Normalize(mean=MEAN, std=STD),
                                         ])
 
     transform_mask = transforms.Compose([
-                                    transforms.Resize(SIZE),
+                                    transforms.Resize(size),
                                     transforms.Lambda(rotate_pil),
                                     transforms.Lambda(to_tensor_target)
                                     ])
@@ -60,7 +54,7 @@ def get_dataset_val(batch_size,angle):
 
     return dataloader_val
 
-def get_dataset_train_VOC(batch_size,angle):
+def get_dataset_train_VOC(batch_size,angle,size,dataroot_voc):
     def to_tensor_target(img):
         img = np.array(img)
         # border
@@ -71,18 +65,15 @@ def get_dataset_train_VOC(batch_size,angle):
         img = TF.rotate(img,angle=angle,fill=fill)
         return img
 
-    def hflip(img):
-        img = TF.hflip(img)
-        return img
     transform_input = transforms.Compose([
-                                    transforms.Resize(SIZE),
+                                    transforms.Resize(size),
                                     transforms.Lambda(rotate_pil),
                                     transforms.ToTensor(),
                                     transforms.Normalize(mean=MEAN, std=STD),
                                         ])
 
     transform_mask = transforms.Compose([
-                                    transforms.Resize(SIZE),
+                                    transforms.Resize(size),
                                     transforms.Lambda(rotate_pil),
                                     transforms.Lambda(to_tensor_target)
                                     ])

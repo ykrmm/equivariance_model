@@ -483,6 +483,18 @@ def save_hparams(args,path):
         print(args,file=f)
     print('Hyper parameters succesfully saved in',fi)
 
+def save_eval_angle(d_iou,save_dir):
+    """
+        Save the evaluation of IoU with different input angle rotation image in a file
+    """
+    angle = 'eval_all_angle.txt'
+    fi = os.path.join(save_dir,angle)
+    with open(fi,'a') as f:
+        for k in d_iou.keys():
+            print('Scores for datasets rotate by',k,'degrees:',file=f)
+            print('   mIoU',d_iou[k]['mIoU'],'Accuracy',d_iou[k]['Accuracy'],'CE Loss',d_iou[k]['CE Loss'],file=f)
+    print('Evaluation with different input rotation angle succesfully saved in',fi)
+
 def save_model(model,save_all_ep,save_best,save_folder,model_name,ep=None,iou=None,iou_test=None):
     if save_all_ep:
         if ep is None:
@@ -497,10 +509,11 @@ def save_model(model,save_all_ep,save_best,save_folder,model_name,ep=None,iou=No
             save_model = model_name+'.pt'
             save = os.path.join(save_folder,save_model)
             torch.save(model,save)
-        if iou > max(iou_test[:len(iou_test)-1]):
-            save_model = model_name+'.pt'
-            save = os.path.join(save_folder,save_model)
-            torch.save(model,save)
+        else:
+            if iou > max(iou_test[:len(iou_test)-1]):
+                save_model = model_name+'.pt'
+                save = os.path.join(save_folder,save_model)
+                torch.save(model,save)
     else:
         save_model = model_name+'.pt'
         save = os.path.join(save_folder,save_model)

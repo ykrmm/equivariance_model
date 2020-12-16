@@ -193,7 +193,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
                                 ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
 
 
-def eval_model_all_angle(model,size,train=False,batch_size=1,device='cpu',num_classes=21):
+def eval_model_all_angle(model,size,dataroot_voc,train=False,batch_size=1,device='cpu',num_classes=21):
     """
         Eval IoU with different angle in the input images.        
         train : Bool -> Use train dataset or not. 
@@ -203,16 +203,15 @@ def eval_model_all_angle(model,size,train=False,batch_size=1,device='cpu',num_cl
     d_iou = d_iou.fromkeys(l_angle,None)
     for angle in l_angle:
         if not train:          
-            dataloader = gd.get_dataset_val(batch_size,angle)
+            dataloader = gd.get_dataset_val(batch_size,angle,size,dataroot_voc)
         else:
-            dataloader = gd.get_dataset_train_VOC(batch_size,angle)
+            dataloader = gd.get_dataset_train_VOC(batch_size,angle,size,dataroot_voc)
         state = eval_model(model,dataloader,device=device,num_classes=num_classes)
         d_iou[angle] = {'mIoU':state.metrics['mean IoU'],'Accuracy':state.metrics['accuracy'],\
             'CE Loss':state.metrics['CE Loss']}
     for k in d_iou.keys():
         print('Scores for datasets rotate by',k,'degrees:')
         print('   mIoU',d_iou[k]['mIoU'],'Accuracy',d_iou[k]['Accuracy'],'CE Loss',d_iou[k]['CE Loss'])
-    
     return d_iou
 
 

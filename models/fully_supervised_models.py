@@ -28,8 +28,9 @@ def main():
     parser.add_argument('--batch_size', default=5, type=int)
     parser.add_argument('--n_epochs', default=10, type=int)
     parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
-    parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
+    parser.add_argument('--eval_angle', default=False, type=U.str2bool,help=\
+        "If true, it'll eval the model with different angle input size")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
@@ -41,8 +42,10 @@ def main():
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
+    parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
-    parser.add_argument('--save_all_ep', default=False, type=U.str2bool,help="If true it'll save the model every epoch in save_dir")
+    parser.add_argument('--save_all_ep', default=False, type=U.str2bool,help=\
+        "If true it'll save the model every epoch in save_dir")
     parser.add_argument('--save_best', default=False, type=U.str2bool,help="If true will only save the best epoch model")
     args = parser.parse_args()
     # ------------
@@ -104,6 +107,13 @@ def main():
     ev.train_fully_supervised(model=model,n_epochs=args.n_epochs,train_loader=dataloader_train,val_loader=dataloader_val,\
         criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,model_name=args.model_name,\
             benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=21)
+
+    # Final evaluation
+    if args.eval_angle:
+        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=True,save_dir=save_dir,device=device)
+        U.save_eval_angle(d_iou,save_dir)
+        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=False,save_dir=save_dir,device=device)
+        U.save_eval_angle(d_iou,save_dir)
     
 
 
