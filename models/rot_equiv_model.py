@@ -14,8 +14,7 @@ import torch.utils.data as tud
 
 
 def main():
-    torch.manual_seed(42)
-
+    #torch.manual_seed(42)
     # ------------
     # args
     # ------------
@@ -35,7 +34,7 @@ def main():
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--eval_every', default=5, type=int,help="Eval all input rotation angle every n step")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
-    parser.add_argument('--max_angle', default=30, type=int,help="Max angle rotation of input image")
+    parser.add_argument('--angle_max', default=30, type=int,help="Max angle rotation of input image")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
@@ -115,10 +114,10 @@ def main():
     #if args.auto_lr==True:
 
     criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
-    optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd)
+    optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
     ev.train_rot_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
-        args.scheduler,args.Loss,args.gamma,args.batch_size,args.save_folder,args.model_name,\
-            benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
+        scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
+            model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
             ,device=device)
 
