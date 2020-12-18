@@ -225,9 +225,9 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
         loss.backward()
         optimizer.step()
-        l_loss.append(loss)
-        l_loss_equiv.append(loss_equiv)
-        l_loss_sup.append(loss_sup)
+        l_loss.append(float(loss))
+        l_loss_equiv.append(float(loss_equiv))
+        l_loss_sup.append(float(loss_sup))
         equiv_acc.append(acc)
     state = eval_model(model,train_loader_equiv,device=device,num_classes=21)
     iou = state.metrics['mean IoU']
