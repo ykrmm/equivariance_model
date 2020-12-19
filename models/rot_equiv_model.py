@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
     parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
-    parser.add_argument('--eval_every', default=5, type=int,help="Eval all input rotation angle every n step")
+    parser.add_argument('--eval_every', default=10, type=int,help="Eval all input rotation angle every n step")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
     parser.add_argument('--angle_max', default=30, type=int,help="Max angle rotation of input image")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
@@ -123,9 +123,9 @@ def main():
 
     # Final evaluation
     if args.eval_angle:
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=True,save_dir=save_dir,device=device)
+        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=True,device=device)
         U.save_eval_angle(d_iou,save_dir)
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=False,save_dir=save_dir,device=device)
+        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=False,device=device)
         U.save_eval_angle(d_iou,save_dir)
     
 

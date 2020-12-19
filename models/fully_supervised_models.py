@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--n_epochs', default=10, type=int)
     parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
-    parser.add_argument('--eval_angle', default=False, type=U.str2bool,help=\
+    parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
