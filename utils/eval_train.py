@@ -269,10 +269,9 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
     equiv_accuracy_test = []
     accuracy_test = []
     accuracy_train = []
-    train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
-                                                     shuffle=True,drop_last=True)
-    train_loader_equiv.batch_size
     for ep in range(n_epochs):
+        train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
+                                                     shuffle=True,drop_last=True)
         print("EPOCH",ep)
         # TRAINING
         d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
