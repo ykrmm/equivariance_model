@@ -372,7 +372,8 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='batch
     print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
     return m_pix_acc, m_loss_equiv
 
-### MODEL UTILS FUNCTIONS         
+### MODEL UTILS FUNCTIONS  
+       
 def deactivate_batchnorm(m):
     """
         Desactive batchnorm when using a torchvision model: model.apply(deactivate_batchnorm)
@@ -383,6 +384,7 @@ def deactivate_batchnorm(m):
         with torch.no_grad():
             m.weight.fill_(1.0)
             m.bias.zero_()
+
 ### PLOT UTILS FUNCTIONS
 
 def get_cmap() -> colors.ListedColormap:
@@ -507,7 +509,7 @@ def save_model(model,save_all_ep,save_best,save_folder,model_name,ep=None,iou=No
         save_model = model_name+'_ep'+str(ep)+'.pt'
         save = os.path.join(save_folder,save_model)
         torch.save(model,save)
-    elif save_best:
+    if save_best:
         if iou is None or iou_test is None:
             raise Exception('Saving best model required to pass the current IoU and the list of IoU in argument.')
         if len(iou_test)<=1:

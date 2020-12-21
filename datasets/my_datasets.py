@@ -90,18 +90,22 @@ class VOCSegmentation(VisionDataset):
                  std=[0.229, 0.224, 0.225],
                  size_img=(520,520),
                  size_crop=(480,480),
+                 scale_factor = (0.5,1.2),
                  p=0.5,
                  p_rotate = 0.25,
-                 rotate=False):
+                 rotate=False,
+                 scale=True):
         super(VOCSegmentation, self).__init__(root, transforms, transform, target_transform)
         ## Transformations
         self.mean = mean
         self.std = std 
         self.size_img = size_img
         self.size_crop = size_crop
+        self.scale_factor = scale_factor
         self.p = p
         self.p_rotate = p_rotate
         self.rotate = rotate
+        self.scale = scale
         self.train = image_set == 'train' or image_set == 'trainval'
         ##
         self.year = year
@@ -140,10 +144,12 @@ class VOCSegmentation(VisionDataset):
     
     def my_transform(self, image, mask):
         # Resize
-        min_size = int((0.5 if self.train else 1.0) * self.size_img[0]) # Consider the x and y of the images is equal.
-        max_size = int((1.2 if self.train else 1.0) * self.size_img[0])
-        if self.train:
-            size = random.randint(480,max_size)
+        
+        if self.train and self.scale:
+            min_f,max_f = self.scale_factor
+            factor = random.uniform(min_f,max_f) 
+            size = int(self.size_img[0] * factor)
+            self.size_crop = (int(self.size_crop[0] * factor),int(self.size_crop[0] * factor)) # Resize the crop size eather
             resize = T.Resize((size,size))
         else:
             resize = T.Resize(self.size_img)
@@ -267,9 +273,11 @@ class SBDataset(VisionDataset):
                  std=[0.229, 0.224, 0.225],
                  size_img=(520,520),
                  size_crop=(480,480),
+                 scale_factor = (0.5,1.2),
                  p=0.5,
                  p_rotate=0.25,
-                 rotate=False):
+                 rotate=False,
+                 scale=True):
 
         try:
             from scipy.io import loadmat
@@ -284,9 +292,11 @@ class SBDataset(VisionDataset):
         self.std = std 
         self.size_img = size_img
         self.size_crop = size_crop
+        self.scale_factor = scale_factor
         self.p = p
         self.p_rotate = p_rotate
         self.rotate = rotate
+        self.scale = scale
         self.train = image_set == 'train' or image_set == 'train_noval'
         ##
         self.image_set = verify_str_arg(image_set, "image_set",
@@ -333,11 +343,12 @@ class SBDataset(VisionDataset):
                                for i in range(self.num_classes)], axis=0)
 
     def my_transform(self, image, mask):
-        # Resize
-        min_size = int((0.5 if self.train else 1.0) * self.size_img[0]) # Consider the x and y of the images is equal.
-        max_size = int((1.2 if self.train else 1.0) * self.size_img[0])
-        if self.train:
-            size = random.randint(480,max_size)
+        # Resize     
+        if self.train and self.scale:
+            min_f,max_f = self.scale_factor
+            factor = random.uniform(min_f,max_f) 
+            size = int(self.size_img[0] * factor)
+            self.size_crop = (int(self.size_crop[0] * factor),int(self.size_crop[0] * factor)) # Resize the crop size eather
             resize = T.Resize((size,size))
         else:
             resize = T.Resize(self.size_img)

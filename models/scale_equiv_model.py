@@ -30,11 +30,9 @@ def main():
     parser.add_argument('--n_epochs', default=10, type=int)
     parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
-    parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
-        "If true, it'll eval the model with different angle input size")
     parser.add_argument('--eval_every', default=30, type=int,help="Eval all input rotation angle every n step")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
-    parser.add_argument('--angle_max', default=30, type=int,help="Max angle rotation of input image")
+    parser.add_argument('--scale_factor', default=30, type=float, nargs='+',help="Scale image between min*size - max*size")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
@@ -115,19 +113,11 @@ def main():
 
     criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
-    ev.train_rot_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
+    ev.train_scale_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
             model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
             ,device=device)
-
-    # Final evaluation
-    if args.eval_angle:
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=True,device=device)
-        U.save_eval_angle(d_iou,save_dir)
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=False,device=device)
-        U.save_eval_angle(d_iou,save_dir)
-    
 
 
 if __name__ == '__main__':

@@ -12,103 +12,16 @@ import random
 import get_datasets as gd
 from matplotlib import colors
 import os
-"""
-def create_trainer(model, optimizer, criterion, lr_scheduler, config):
 
-    def train_step(engine, batch):
-        x, y = batch[0].to(idist.device()), batch[1].to(idist.device())
-        model.train()
-        y_pred = model(x)
-        loss = criterion(y_pred, y)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-
-        return loss.item()
-
-    # Define trainer engine
-    trainer = Engine(train_step)
-
-    if idist.get_rank() == 0:
-        # Add any custom handlers
-        @trainer.on(Events.ITERATION_COMPLETED(every=200))
-        def save_checkpoint():
-            fp = Path(config.get("output_path", "output")) / "checkpoint.pt"
-            torch.save(model.state_dict(), fp)
-
-        # Add progress bar showing batch loss value
-        ProgressBar().attach(trainer, output_transform=lambda x: {"batch loss": x})
-
-    return trainer
-
-
-# slide 2 ####################################################################
-
-
-def training(local_rank, config):
-
-    # Setup dataflow and
-    train_loader, val_loader = get_dataflow(config)
-    model, optimizer, criterion, lr_scheduler = initialize(config)
-
-    # Setup model trainer and evaluator
-    trainer = create_trainer(model, optimizer, criterion, lr_scheduler, config)
-    evaluator = create_supervised_evaluator(model, metrics={"accuracy": Accuracy()}, device=idist.device())
-
-    # Run model evaluation every 3 epochs and show results
-    @trainer.on(Events.EPOCH_COMPLETED(every=3))
-    def evaluate_model():
-        state = evaluator.run(val_loader)
-        if idist.get_rank() == 0:
-            print(state.metrics)
-
-    # Setup tensorboard experiment tracking
-    if idist.get_rank() == 0:
-        tb_logger = common.setup_tb_logging(
-            config.get("output_path", "output"), trainer, optimizer, evaluators={"validation": evaluator},
-        )
-
-    trainer.run(train_loader, max_epochs=config.get("max_epochs", 3))
-
-    if idist.get_rank() == 0:
-        tb_logger.close()
-
-
-"""
 
 ##############
 
-def eval_model(model,val_loader,device='cpu',num_classes=21):
 
-    def evaluate_function(engine, batch):
-        model.eval()
-        with torch.no_grad():
-            img, mask = batch
-            img = img.to(device)
-            mask = mask.to(device)
-            mask_pred = model(img)
-            try:
-                mask_pred = mask_pred['out'] 
-            except:
-                print('')
-            return mask_pred, mask
-
-    val_evaluator = Engine(evaluate_function)
-    cm = ConfusionMatrix(num_classes=num_classes)
-    mIoU(cm).attach(val_evaluator, 'mean IoU')   
-    Accuracy().attach(val_evaluator, "accuracy")
-    Loss(loss_fn=nn.CrossEntropyLoss())\
-    .attach(val_evaluator, "CE Loss")
-
-    state = val_evaluator.run(val_loader)
-    #print("mIoU :",state.metrics['mean IoU'])
-    #print("Accuracy :",state.metrics['accuracy'])
-    #print("CE Loss :",state.metrics['CE Loss'])
-    
-    return state
-
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                           FULLY SUPERVISED TRAINING
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',num_classes=21):
     """
         A step of fully supervised segmentation model training.
@@ -140,7 +53,35 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
     #print("CE Loss :",state.metrics['CE Loss'])
     
     return state
+    
+def eval_model(model,val_loader,device='cpu',num_classes=21):
 
+    def evaluate_function(engine, batch):
+        model.eval()
+        with torch.no_grad():
+            img, mask = batch
+            img = img.to(device)
+            mask = mask.to(device)
+            mask_pred = model(img)
+            try:
+                mask_pred = mask_pred['out'] 
+            except:
+                print('')
+            return mask_pred, mask
+
+    val_evaluator = Engine(evaluate_function)
+    cm = ConfusionMatrix(num_classes=num_classes)
+    mIoU(cm).attach(val_evaluator, 'mean IoU')   
+    Accuracy().attach(val_evaluator, "accuracy")
+    Loss(loss_fn=nn.CrossEntropyLoss())\
+    .attach(val_evaluator, "CE Loss")
+
+    state = val_evaluator.run(val_loader)
+    #print("mIoU :",state.metrics['mean IoU'])
+    #print("Accuracy :",state.metrics['accuracy'])
+    #print("CE Loss :",state.metrics['CE Loss'])
+    
+    return state
 def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,scheduler,\
         save_folder,model_name,benchmark=False,save_all_ep=True, save_best=False, device='cpu',num_classes=21):
     """
@@ -194,7 +135,11 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
                                 ,loss_test=loss_test,iou_test=iou_test,accuracy_test=accuracy_test)
 
 
-
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                               ROTATION EQUIV
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
 def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
                         optimizer,gamma,Loss,device,angle_max=30):
@@ -337,4 +282,114 @@ def eval_model_all_angle(model,size,dataroot_voc,train=False,batch_size=1,device
     return d_iou
 
 
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                               SCALE EQUIVARIANCE
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
+def train_step_scale_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
+                        optimizer,gamma,Loss,device,size_img,scale_factor=(0.5,1.2)):
+    """
+        A training epoch for rotational equivariance using for semantic segmentation
+    """
+    l_loss_equiv = []
+    l_loss_sup = []
+    l_loss = []
+    equiv_acc = [] # Equivariance accuracy btwn the mask of the input rotated image and the mask of non rotated image
+    model.train()
+    for batch_sup,batch_unsup in zip(train_loader_sup,train_loader_equiv):
+        optimizer.zero_grad()
+        min_f,max_f = scale_factor
+        factor = random.uniform(min_f,max_f) 
+        size = int(size_img * factor)
+        x_unsup,_ = batch_unsup
+        loss_equiv,acc = U.compute_scale_equiv_batch(x_unsup,model,size=(size,size),\
+                                                     criterion=criterion_unsupervised,Loss = Loss,\
+                                                       device=device)
+        x,mask = batch_sup
+        x = x.to(device)
+        mask = mask.to(device)
+        pred = model(x)["out"]
+        loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
+        loss_sup = criterion_supervised(pred,mask)
+        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
+        loss.backward()
+        optimizer.step()
+        l_loss.append(float(loss))
+        l_loss_equiv.append(float(loss_equiv))
+        l_loss_sup.append(float(loss_sup))
+        equiv_acc.append(acc)
+    state = eval_model(model,train_loader_equiv,device=device,num_classes=21)
+    iou = state.metrics['mean IoU']
+    accuracy = state.metrics['accuracy']
+    d = {'loss':np.array(l_loss).mean(),'loss_equiv':np.array(l_loss_equiv).mean(),\
+        'loss_sup':np.array(l_loss_sup).mean(),'equiv_acc':np.array(equiv_acc).mean(),'iou_train':iou,'accuracy_train':accuracy}
+    return d
 
+
+def train_scale_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_loader,criterion_supervised,optimizer,scheduler,\
+        Loss,gamma,batch_size,save_folder,model_name,benchmark=False,angle_max=30,size_img=520,scale_factor=(0.5,1.2),\
+        save_all_ep=True,dataroot_voc='~/data/voc2012',save_best=False, device='cpu',num_classes=21):
+    """
+        A complete training of rotation equivariance supervised model. 
+        save_folder : Path to save the model, the courb of losses,metric...
+        benchmark : enable or disable backends.cudnn 
+        Loss : Loss for unsupervised training 'KL' 'CE' 'L1' or 'MSE'
+        gamma : float btwn [0,1] -> Balancing two losses loss_sup*gamma + (1-gamma)*loss_unsup
+        save_all_ep : if True, the model is saved at each epoch in save_folder
+        scheduler : if True, the model will apply a lr scheduler during training
+        eval_every : Eval Model with different input image angle every n step
+        size_img : size of image during evaluation
+        scale_factor : scale between min*size_img and max*size_img
+    """
+    torch.backends.cudnn.benchmark=benchmark
+    if scheduler:
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: (1 - x / (len(train_loader_sup) * n_epochs)) ** 0.9)
+    criterion_unsupervised = U.get_criterion(Loss)
+    iou_train = []
+    iou_test = []
+    combine_loss_train = []
+    combine_loss_test = []
+    loss_train_unsup = []
+    loss_train_sup = []
+    loss_test_unsup = []
+    loss_test_sup = []
+    equiv_accuracy_train = []
+    equiv_accuracy_test = []
+    accuracy_test = []
+    accuracy_train = []
+    for ep in range(n_epochs):
+        train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
+                                                     shuffle=True,drop_last=True)
+        print("EPOCH",ep)
+        # TRAINING
+        d = train_step_scale_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
+                        optimizer,gamma,Loss,device,size_img=size_img,scale_factor=scale_factor)
+        if scheduler:
+            lr_scheduler.step()
+        combine_loss_train.append(d['loss'])
+        loss_train_unsup.append(d['loss_equiv'])
+        loss_train_sup.append(d['loss_sup'])
+        equiv_accuracy_train.append(d['equiv_acc'])
+        iou_train.append(d['iou_train'])
+        accuracy_train.append(d['accuracy_train'])
+        print('TRAIN - EP:',ep,'iou:',d['iou_train'],'Accuracy:',d['accuracy_train'],'Loss sup:',d['loss_sup'],\
+            'Loss equiv:',d['loss_equiv'],'Combine Loss:',d['loss'],'Equivariance Accuracy:',d['equiv_acc'],)
+        # EVALUATION 
+        model.eval()
+        with torch.no_grad():
+            state = eval_model(model,val_loader,device=device,num_classes=num_classes)
+            iou = state.metrics['mean IoU']
+            acc = state.metrics['accuracy']
+            loss = state.metrics['CE Loss'] 
+            loss_test_sup.append(loss)
+            iou_test.append(iou)
+            accuracy_test.append(acc)
+            print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+
+    U.save_curves(path=save_folder,combine_loss_train=combine_loss_train,loss_train_sup=loss_train_sup,\
+    loss_train_unsup=loss_train_unsup,iou_train=iou_train,accuracy_train=accuracy_train,equiv_accuracy_train=equiv_accuracy_train,\
+    combine_loss_test=combine_loss_test,loss_test_unsup=loss_test_unsup,equiv_accuracy_test=equiv_accuracy_test,\
+    loss_test_sup= loss_test_sup,iou_test=iou_test,accuracy_test=accuracy_test)
