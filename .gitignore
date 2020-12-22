@@ -147,3 +147,6 @@ saved_model/
 *nohup.out*
 */nohup.out
 *.out
+utils_on_gpu/
+utils_on_gpu
+utils_on_gpu/*

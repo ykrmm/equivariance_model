@@ -201,7 +201,6 @@ class VOCSegmentation(VisionDataset):
         target = Image.open(self.masks[index])
 
         img, target = self.my_transform(img, target)
-        print('img du dataset:',img.size(),'target du dataset:',target.size())
         return img, target
 
 
