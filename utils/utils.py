@@ -81,6 +81,14 @@ def split_dataset(dataset,percent:float) -> torch.utils.data.Dataset:
     torch.manual_seed(torch.initial_seed())
     return train_full_supervised
 
+
+def my_collate(batch):
+    print(len(batch))
+    print(batch[0][0].size(),batch[0][1].size())
+    data = [item[0] for item in batch]
+    target = [item[1] for item in batch]
+    return (data, target)
+
 ### METRICS FUNCTIONS 
 
 SMOOTH = 1e-6

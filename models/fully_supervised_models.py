@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--scale', default=True, type=U.str2bool,help="Use scale as data augmentation")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
@@ -78,10 +79,10 @@ def main():
     size_img = (args.size_img,args.size_img)
     size_crop = (args.size_crop,args.size_crop)
     train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', \
-        download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        download=True,rotate=args.rotate,scale=args.scale,size_img=size_img,size_crop=size_crop)
     val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
     train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
-        rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        rotate=args.rotate,scale=args.scale,size_img=size_img,size_crop=size_crop)
     # Concatene dataset
     train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
     split = args.split
@@ -90,7 +91,7 @@ def main():
     # Print len datasets
     print("There is",len(train_dataset),"images for training and",len(val_dataset_VOC),"for validation")
     dataloader_train = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,num_workers=args.nw,\
-        pin_memory=args.pm,shuffle=True,drop_last=True)
+        pin_memory=args.pm,shuffle=True,drop_last=True)#,collate_fn=U.my_collate)
     dataloader_val = torch.utils.data.DataLoader(val_dataset_VOC,num_workers=args.nw,pin_memory=args.pm,\
         batch_size=args.batch_size)
     # Decide which device we want to run on

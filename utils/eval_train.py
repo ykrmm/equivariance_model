@@ -29,10 +29,10 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
 
     def train_function(engine, batch):
         optimizer.zero_grad()
-        model.train()       
-        img, mask = batch   
+        model.train()  
+        img,mask = batch       
         img = img.to(device)
-        mask = mask.to(device)    
+        mask = mask.to(device)   
         mask_pred = model(img)
         try:
             mask_pred = mask_pred['out'] 

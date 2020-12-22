@@ -110,14 +110,14 @@ def main():
     # ------------
     # Auto lr finding
     #if args.auto_lr==True:
-
+    print(args.scale_factor,args.scale_factor[0],args.scale_factor[1])
     criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
     ev.train_scale_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
-            model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
-        eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
-            ,device=device)
+            model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,scale_factor = args.scale_factor,\
+                size_img=args.size_img,eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,\
+                    save_best=args.save_best,device=device)
 
 
 if __name__ == '__main__':

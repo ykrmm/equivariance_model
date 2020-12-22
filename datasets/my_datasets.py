@@ -146,10 +146,12 @@ class VOCSegmentation(VisionDataset):
         # Resize
         
         if self.train and self.scale:
-            min_f,max_f = self.scale_factor
-            factor = random.uniform(min_f,max_f) 
-            size = int(self.size_img[0] * factor)
-            self.size_crop = (int(self.size_crop[0] * factor),int(self.size_crop[0] * factor)) # Resize the crop size eather
+            min_size = int(self.size_img[0]*self.scale_factor[0])
+            max_size = int(self.size_img[0]*self.scale_factor[1])
+            if  min_size < self.size_crop[0]: 
+                size = random.randint(self.size_crop[0],max_size)
+            else:
+                size = random.randint(min_size,max_size)
             resize = T.Resize((size,size))
         else:
             resize = T.Resize(self.size_img)
@@ -199,7 +201,7 @@ class VOCSegmentation(VisionDataset):
         target = Image.open(self.masks[index])
 
         img, target = self.my_transform(img, target)
-
+        print('img du dataset:',img.size(),'target du dataset:',target.size())
         return img, target
 
 
@@ -345,10 +347,12 @@ class SBDataset(VisionDataset):
     def my_transform(self, image, mask):
         # Resize     
         if self.train and self.scale:
-            min_f,max_f = self.scale_factor
-            factor = random.uniform(min_f,max_f) 
-            size = int(self.size_img[0] * factor)
-            self.size_crop = (int(self.size_crop[0] * factor),int(self.size_crop[0] * factor)) # Resize the crop size eather
+            min_size = int(self.size_img[0]*self.scale_factor[0])
+            max_size = int(self.size_img[0]*self.scale_factor[1])
+            if  min_size < self.size_crop[0]: 
+                size = random.randint(self.size_crop[0],max_size)
+            else:
+                size = random.randint(min_size,max_size)
             resize = T.Resize((size,size))
         else:
             resize = T.Resize(self.size_img)
