@@ -13,8 +13,11 @@ from string import digits
 import sys
 import os
 
-
-### CONSTANT
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            CONSTANTS AND TYPES
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 """Pascal VOC Dataset Segmentation Dataloader"""
 VOC_CLASSES = ('background',  # always index 0
                    'aeroplane', 'bicycle', 'bird', 'boat',
@@ -28,8 +31,8 @@ def get_voc_cst() -> (tuple,int):
     
     return VOC_CLASSES,NUM_CLASSES
 
-def get_criterion(key:str) -> dict:
-    d = {'CE':nn.CrossEntropyLoss(ignore_index=21),'KL':nn.KLDivLoss(reduction = 'batchmean', log_target = False),\
+def get_criterion(key:str,reduction='batchmean') -> dict:
+    d = {'CE':nn.CrossEntropyLoss(ignore_index=21),'KL':nn.KLDivLoss(reduction = reduction, log_target = False),\
         'L1':nn.L1Loss(reduction='mean'),'MSE':nn.MSELoss()}
     return d[key]
 
@@ -45,7 +48,11 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-### SAVE AND DATASETS UTILS FUNCTIONS
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            SAVE AND DATASETS UTILS
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
     
 class Split_Dataset(Dataset):
@@ -89,7 +96,11 @@ def my_collate(batch):
     target = [item[1] for item in batch]
     return (data, target)
 
-### METRICS FUNCTIONS 
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            METRICS FUNCTIONS
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
 SMOOTH = 1e-6
 def iou(outputs: torch.Tensor, labels: torch.Tensor):
@@ -228,7 +239,11 @@ def evaluate_model(model,val_loader,criterion=torch.nn.CrossEntropyLoss(ignore_i
     print("Mean IOU :",np.array(iou_test).mean(),"Pixel Accuracy :",np.array(pixel_accuracy).mean(),"Loss Validation :",np.array(loss_test).mean())
     return all_iou
 
-### EQUIVARIANCE UTILS FUNCTIONS 
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            EQUIVARIANCE UTILS FUNCTION
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
 # rotate images
 def rotate_image(image,angle,reshape=False):
@@ -334,7 +349,8 @@ def compute_scale_equiv_batch(x,model,size=(224,224), mode = 'nearest',\
     pred_resized_x = F.interpolate(pred_resized_x,original_size,mode=mode)  # Resize the transformed input to the original size
     if Loss=='KL':
         loss = criterion(logsoftmax(pred_resized_x.cpu()),softmax(pred_x.cpu())) #KL divergence between the two predictions
-        loss = loss/ (pred_x.size()[2]*pred_x.size()[3]) # Divide by the number of pixel in the image. Essential for batchmean mode in KLDiv
+        loss = loss/ (size[0]*size[0]) # Divide by the number of pixel in the image. Essential for batchmean mode in KLDiv
+                                        # MAY BE WRONG !!!
     elif Loss == 'CE':
         loss = criterion(pred_resized_x.cpu(),pred_x.argmax(dim=1).detach().cpu()) # Use the prediction on the original image as GTruth.  
     else:
@@ -380,7 +396,11 @@ def eval_accuracy_equiv(model,val_loader,criterion=nn.KLDivLoss(reduction='batch
     print("Mean Pixel Accuracy between masks :",m_pix_acc,"Loss Validation :",m_loss_equiv)
     return m_pix_acc, m_loss_equiv
 
-### MODEL UTILS FUNCTIONS  
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            MODEL UTILS FUNCTION
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
        
 def deactivate_batchnorm(m):
     """
@@ -392,8 +412,11 @@ def deactivate_batchnorm(m):
         with torch.no_grad():
             m.weight.fill_(1.0)
             m.bias.zero_()
-
-### PLOT UTILS FUNCTIONS
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                           PLOT UTILS FUNCTION
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
 def get_cmap() -> colors.ListedColormap:
     """
@@ -463,7 +486,11 @@ def plot_equiv_mask(rot_mask,mask,cmap=None):
     return ind_class
         
         
-#### SAVING FUNCTIONS 
+###########################################################################################################################|
+#--------------------------------------------------------------------------------------------------------------------------|
+#                                            SAVING FUNCTION
+#--------------------------------------------------------------------------------------------------------------------------|
+###########################################################################################################################|
 
 def create_save_directory(path_save):
     """

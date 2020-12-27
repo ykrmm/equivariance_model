@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
     parser.add_argument('--eval_every', default=30, type=int,help="Eval all input rotation angle every n step")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--scale', default=True, type=U.str2bool,help="Use scale as data augmentation")
     parser.add_argument('--scale_factor', default=30, type=float, nargs='+',help="Scale image between min*size - max*size")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
@@ -80,10 +81,10 @@ def main():
     size_img = (args.size_img,args.size_img)
     size_crop = (args.size_crop,args.size_crop)
     train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', \
-        download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        download=True,rotate=args.rotate,scale=args.scale,size_img=size_img,size_crop=size_crop)
     val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
     train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
-        rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        rotate=args.rotate,scale=args.scale,size_img=size_img,size_crop=size_crop)
     # Concatene dataset
     train_dataset_unsup = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
 
@@ -110,13 +111,13 @@ def main():
     # ------------
     # Auto lr finding
     #if args.auto_lr==True:
-    print(args.scale_factor,args.scale_factor[0],args.scale_factor[1])
+    scale_factor = (0.2,0.8)
     criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
     ev.train_scale_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
-            model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,scale_factor = args.scale_factor,\
-                size_img=args.size_img,eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,\
+            model_name=args.model_name,benchmark=args.benchmark,scale_factor = scale_factor,\
+                size_img=args.size_img,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,\
                     save_best=args.save_best,device=device)
 
 

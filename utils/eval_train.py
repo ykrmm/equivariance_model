@@ -360,6 +360,7 @@ def train_scale_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_lo
     equiv_accuracy_test = []
     accuracy_test = []
     accuracy_train = []
+    torch.autograd.set_detect_anomaly(True)
     for ep in range(n_epochs):
         train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
                                                      shuffle=True,drop_last=True)
