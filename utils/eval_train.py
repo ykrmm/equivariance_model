@@ -311,6 +311,7 @@ def train_step_scale_equiv(model,train_loader_sup,train_loader_equiv,criterion_s
         mask = mask.to(device)
         pred = model(x)["out"]
         loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
+        print('Loss equiv',loss_equiv)
         loss_sup = criterion_supervised(pred,mask)
         loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
         loss.backward()
@@ -348,6 +349,7 @@ def train_scale_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_lo
         optimizer,
         lambda x: (1 - x / (len(train_loader_sup) * n_epochs)) ** 0.9)
     criterion_unsupervised = U.get_criterion(Loss)
+    print('Criterion Unsupervised',criterion_unsupervised)
     iou_train = []
     iou_test = []
     combine_loss_train = []
