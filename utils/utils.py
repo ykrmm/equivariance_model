@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from string import digits
 import sys
 import os
-
+import random
 ###########################################################################################################################|
 #--------------------------------------------------------------------------------------------------------------------------|
 #                                            CONSTANTS AND TYPES
@@ -511,9 +511,13 @@ def save_curves(path,**kwargs):
         path : path to save all the curves
         **kwargs : must be name_of_the_list = list
     """
+    
     for name,l in kwargs.items():
         curve_name = os.path.join(path,str(name)+'.npy')
-        np.save(curve_name,np.array(l))
+        if os.path.exists(curve_name): # If file exist save with an other name
+            np.save(curve_name+str(random.randint(0,100)),np.array(l))
+        else:
+            np.save(curve_name,np.array(l))
 
 def save_hparams(args,path):
     """

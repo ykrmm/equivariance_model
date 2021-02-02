@@ -14,7 +14,7 @@ import utils as U
 import eval_train as ev
 from argparse import ArgumentParser
 import torch.utils.data as tud
-
+# FICHIER PROVISOIRE TEST DU DATASET LANDSCAPE 
 
 def main():
     #torch.manual_seed(42)
@@ -48,10 +48,13 @@ def main():
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--extra_coco', default=False, type=U.str2bool,\
          help="Use coco dataset as extra annotation for fully supervised training")
+    parser.add_argument('--landcover', default=False, type=U.str2bool,\
+         help="Use Landcover dataset instead of VOC and COCO")
     parser.add_argument('--multi_task', default=False, type=U.str2bool, help="Multi task training (same data for equiv and sup)")
     parser.add_argument('--dataroot_voc', default='~/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='~/data/sbd', type=str)
     parser.add_argument('--dataroot_coco', default='/share/DEEPLEARNING/datasets/coco', type=str)
+    parser.add_argument('--dataroot_landcover', default='/users/k/karmimy/data/landcover', type=str)
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
     parser.add_argument('--save_all_ep', default=False, type=U.str2bool,help=\
@@ -77,16 +80,23 @@ def main():
         raise Exception('Cannot have size of input images less than size of crop')
     size_img = (args.size_img,args.size_img)
     size_crop = (args.size_crop,args.size_crop)
-    train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', \
-        download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
-    val_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
-    train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
-        rotate=args.rotate,size_img=size_img,size_crop=size_crop)
-    #COCO dataset 
-    if args.extra_coco:
-        extra_COCO = cu.get_coco(args.dataroot_coco,'train',rotate=args.rotate,size_img=size_img,size_crop=size_crop)
-    # Concatene dataset
-    train_dataset_unsup = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
+    if not args.landcover:
+        train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', \
+            download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        test_dataset = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
+        train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
+            rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        #COCO dataset 
+        if args.extra_coco:
+            extra_COCO = cu.get_coco(args.dataroot_coco,'train',rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        # Concatene dataset
+        train_dataset_unsup = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
+    else:
+        print('Loading Landscape Dataset')
+        train_dataset_unsup = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
+            rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
+        print('Success load Landscape Dataset')
 
     # Split dataset
     split = args.split
@@ -99,16 +109,16 @@ def main():
         train_dataset_unsup = train_dataset_sup
 
     # If extra coco concatene all dataset for unsupervised training
-    if args.extra_coco:
+    if args.extra_coco and not args.landcover:
         train_dataset_unsup = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD,extra_COCO])
 
     # Print len datasets
     print("There is",len(train_dataset_sup),"images for supervised training",len(train_dataset_unsup),\
-        "for equivariance loss and",len(val_dataset_VOC),"for validation")
+        "for equivariance loss and",len(test_dataset),"for validation")
     
     dataloader_train_sup = torch.utils.data.DataLoader(train_dataset_sup, batch_size=args.batch_size,num_workers=args.nw,\
         pin_memory=args.pm,shuffle=True,drop_last=True)
-    dataloader_val = torch.utils.data.DataLoader(val_dataset_VOC,num_workers=args.nw,pin_memory=args.pm,\
+    dataloader_val = torch.utils.data.DataLoader(test_dataset,num_workers=args.nw,pin_memory=args.pm,\
         batch_size=args.batch_size)
     # ---------
     # Load model

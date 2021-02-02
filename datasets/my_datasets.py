@@ -1,4 +1,5 @@
 import os
+import os.path
 import tarfile
 import collections
 import torch
@@ -6,11 +7,13 @@ from torchvision.datasets.utils import download_url, check_integrity, verify_str
 import torchvision.transforms.functional as TF
 import torchvision.transforms as T
 from torchvision.datasets.vision import VisionDataset
+from torch.utils.data import Dataset
 import xml.etree.ElementTree as ET
 from PIL import Image
 import random
 import shutil
 import numpy as np
+from typing import Any, Callable, Optional, Tuple
 
 
 
@@ -59,6 +62,58 @@ DATASET_YEAR_DICT = {
     }
 }
 
+class CocoDetection(VisionDataset):
+    """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
+
+    Args:
+        root (string): Root directory where images are downloaded to.
+        annFile (string): Path to json annotation file.
+        transform (callable, optional): A function/transform that  takes in an PIL image
+            and returns a transformed version. E.g, ``transforms.ToTensor``
+        target_transform (callable, optional): A function/transform that takes in the
+            target and transforms it.
+        transforms (callable, optional): A function/transform that takes input sample and its target as entry
+            and returns a transformed version.
+    """
+
+    def __init__(
+            self,
+            root: str,
+            annFile: str,
+            transform: Optional[Callable] = None,
+            target_transform: Optional[Callable] = None,
+            transforms: Optional[Callable] = None,
+    ) -> None:
+        super(CocoDetection, self).__init__(root, transforms, transform, target_transform)
+        from pycocotools.coco import COCO
+        self.coco = COCO(annFile)
+        self.ids = list(sorted(self.coco.imgs.keys()))
+        self.transforms = transforms
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: Tuple (image, target). target is the object returned by ``coco.loadAnns``.
+        """
+        coco = self.coco
+        img_id = self.ids[index]
+        ann_ids = coco.getAnnIds(imgIds=img_id)
+        target = coco.loadAnns(ann_ids)
+
+        path = coco.loadImgs(img_id)[0]['file_name']
+
+        img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+
+        return img, target
+
+
+    def __len__(self) -> int:
+        return len(self.ids)
 
 class VOCSegmentation(VisionDataset):
     """`Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Segmentation Dataset.
@@ -180,9 +235,6 @@ class VOCSegmentation(VisionDataset):
                         image = TF.rotate(image,angle=angle)
                         mask = TF.rotate(mask,angle=angle)
                     
-
-        
-
         # Transform to tensor
         image = TF.to_tensor(image)
         image = TF.normalize(image,self.mean,self.std)
@@ -219,6 +271,13 @@ def to_tensor_target(mask):
     mask = np.array(mask)
     # border
     mask[mask==255] = 0 # border = background 
+    return torch.LongTensor(mask)
+
+def to_tensor_target_lc(mask):
+    # For the landcoverdataset
+    mask = np.array(mask)
+    mask = np.mean(mask, axis=2) 
+
     return torch.LongTensor(mask)
 
 
@@ -392,8 +451,6 @@ class SBDataset(VisionDataset):
     def __getitem__(self, index):
         img = Image.open(self.images[index]).convert('RGB')
         target = self._get_target(self.masks[index])
-
-        
         img, target = self.my_transform(img, target)
 
         return img, target
@@ -405,3 +462,94 @@ class SBDataset(VisionDataset):
         lines = ["Image set: {image_set}", "Mode: {mode}"]
         return '\n'.join(lines).format(**self.__dict__)
 
+
+class LandscapeDataset(Dataset):
+    def __init__(self,
+                 dataroot,
+                 image_set='trainval',
+                 mean = [0.485, 0.456, 0.406],
+                 std = [0.229, 0.224, 0.225],
+                 size_img = (512,512),
+                 size_crop = (480,480),
+                 scale_factor = (0.5,1.2),
+                 p = 0.5,
+                 p_rotate = 0.25,
+                 rotate = False,
+                 scale = True):
+        super(LandscapeDataset).__init__()
+
+        ## Transform
+        self.mean = mean
+        self.std = std 
+        self.size_img = size_img
+        self.size_crop = size_crop
+        self.scale_factor = scale_factor
+        self.p = p
+        self.p_rotate = p_rotate
+        self.rotate = rotate
+        self.scale = scale
+        ##
+
+        if image_set!= 'train' and image_set!='trainval' and image_set!='test':
+            raise Exception("image set should be 'train' 'trainval' or 'test',not",image_set)
+        self.train = image_set == 'train' or image_set == 'trainval'
+        self.root_img = os.path.join(dataroot,'output')
+        split_f = os.path.join(dataroot, image_set.rstrip('\n') + '.txt')
+        with open(os.path.join(split_f), "r") as f:
+            self.file_names = [x.strip() for x in f.readlines()]
+
+    def my_transform(self, image, mask):
+        # Resize     
+        if self.train and self.scale:
+            min_size = int(self.size_img[0]*self.scale_factor[0])
+            max_size = int(self.size_img[0]*self.scale_factor[1])
+            if  min_size < self.size_crop[0]: 
+                size = random.randint(self.size_crop[0],max_size)
+            else:
+                size = random.randint(min_size,max_size)
+            resize = T.Resize((size,size))
+        else:
+            resize = T.Resize(self.size_img)
+        image = resize(image)
+        mask = resize(mask)
+
+        if self.train : 
+            # Random crop
+            i, j, h, w = T.RandomCrop.get_params(
+                image, output_size=self.size_crop)
+            image = TF.crop(image, i, j, h, w)
+            mask = TF.crop(mask, i, j, h, w)
+
+            # Random horizontal flipping
+            if random.random() > self.p:
+                image = TF.hflip(image)
+                mask = TF.hflip(mask)
+                
+            if self.rotate:
+                if random.random() > self.p_rotate:
+                    if random.random() > 0.5:
+                        angle = np.random.randint(0,30)
+                        image = TF.rotate(image,angle=angle)
+                        mask = TF.rotate(mask,angle=angle)
+                    else:
+                        angle = np.random.randint(330,360)
+                        image = TF.rotate(image,angle=angle)
+                        mask = TF.rotate(mask,angle=angle)
+
+        
+
+        # Transform to tensor
+        image = TF.to_tensor(image)
+        image = TF.normalize(image,self.mean,self.std)
+        mask = to_tensor_target_lc(mask)
+        return image, mask
+
+
+    def __getitem__(self, index):
+        img = Image.open(os.path.join(self.root_img,self.file_names[index]+'.jpg')).convert('RGB')
+        target = Image.open(os.path.join(self.root_img,self.file_names[index]+'_m.png'))
+        img, target = self.my_transform(img, target)
+        return img, target
+
+    def __len__(self):
+        return len(self.file_names)
