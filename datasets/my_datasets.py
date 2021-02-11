@@ -475,7 +475,8 @@ class LandscapeDataset(Dataset):
                  p = 0.5,
                  p_rotate = 0.25,
                  rotate = False,
-                 scale = True):
+                 scale = True,
+                 normalize=True):
         super(LandscapeDataset).__init__()
 
         ## Transform
@@ -488,6 +489,7 @@ class LandscapeDataset(Dataset):
         self.p_rotate = p_rotate
         self.rotate = rotate
         self.scale = scale
+        self.normalize = normalize
         ##
 
         if image_set!= 'train' and image_set!='trainval' and image_set!='test':
@@ -540,7 +542,8 @@ class LandscapeDataset(Dataset):
 
         # Transform to tensor
         image = TF.to_tensor(image)
-        image = TF.normalize(image,self.mean,self.std)
+        if self.normalize:
+            image = TF.normalize(image,self.mean,self.std)
         mask = to_tensor_target_lc(mask)
         return image, mask
 

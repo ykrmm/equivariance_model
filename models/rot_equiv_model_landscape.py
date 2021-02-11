@@ -43,7 +43,7 @@ def main():
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=U.str2bool,help="Pin memory for the dataloader")
     parser.add_argument('--gpu', default=0, type=int,help="Wich gpu to select for training")
-    parser.add_argument('--benchmark', default=False, type=U.str2bool, help="enable or disable backends.cudnn")
+    parser.add_argument('--benchmark', default=True, type=U.str2bool, help="enable or disable backends.cudnn")
     parser.add_argument('--split', default=True, type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--extra_coco', default=False, type=U.str2bool,\

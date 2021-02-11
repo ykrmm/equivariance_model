@@ -26,6 +26,8 @@ VOC_CLASSES = ('background',  # always index 0
                    'motorbike', 'person', 'pottedplant',
                    'sheep', 'sofa', 'train', 'tvmonitor')
 
+LANDCOVER_CLASS = ('building','woodlands','water')
+
 NUM_CLASSES = len(VOC_CLASSES) + 1
 def get_voc_cst() -> (tuple,int):
     
@@ -425,6 +427,13 @@ def get_cmap() -> colors.ListedColormap:
     cmap_test = colors.ListedColormap(['black','green','blue','yellow','pink','orange','maroon','darkorange'\
                                  ,'skyblue','chocolate','azure','hotpink','tan','gold','silver','navy','white'\
                                 ,'olive','beige','brown','royalblue','violet'])
+    return cmap_test
+
+def get_cmap_landcover() -> colors.ListedColormap:
+    """
+        return a cmap for landcover dataset
+    """
+    cmap_test = colors.ListedColormap(['black','blue','green'])
     return cmap_test
 
 def plot_pred_mask(pred,mask,cmap=None,iou=True):

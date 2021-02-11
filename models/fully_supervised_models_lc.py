@@ -131,13 +131,6 @@ def main():
         criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,model_name=args.model_name,\
             benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=21)
 
-    # Final evaluation
-    if args.eval_angle:
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=True,device=device)
-        U.save_eval_angle(d_iou,save_dir)
-        d_iou = ev.eval_model_all_angle(model,args.size_img,args.dataroot_voc,train=False,device=device)
-        U.save_eval_angle(d_iou,save_dir)
-    
 
 
 if __name__ == '__main__':
