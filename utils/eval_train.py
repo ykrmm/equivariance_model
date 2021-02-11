@@ -37,11 +37,17 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
         try:
             mask_pred = mask_pred['out'] 
         except:
-            print('')
+            print('')   
+        #print(mask_pred)
+        #print("UNIQUE",torch.unique(mask_pred.argmax(dim=1)))
+        #print("SIZE",mask_pred.size())
         loss = criterion(mask_pred, mask)
         loss.backward()
         optimizer.step()
+        
         return mask_pred, mask
+    #print(num_classes)
+    
     train_engine = Engine(train_function)
     cm = ConfusionMatrix(num_classes=num_classes)#,output_transform=output_transform)
     mIoU(cm).attach(train_engine, 'mean IoU')   

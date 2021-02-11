@@ -37,6 +37,7 @@ def main():
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--eval_every', default=30, type=int,help="Eval all input rotation angle every n step")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--pi_rotate', default=True, type=U.str2bool,help="Use only pi/2 rotation angle")
     parser.add_argument('--angle_max', default=30, type=int,help="Max angle rotation of input image")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
@@ -81,21 +82,27 @@ def main():
     size_img = (args.size_img,args.size_img)
     size_crop = (args.size_crop,args.size_crop)
     if not args.landcover:
+        print('Loading VOC and SBD Dataset')
         train_dataset_VOC = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='train', \
             download=True,rotate=args.rotate,size_img=size_img,size_crop=size_crop)
         test_dataset = mdset.VOCSegmentation(args.dataroot_voc,year='2012', image_set='val', download=True)
         train_dataset_SBD = mdset.SBDataset(args.dataroot_sbd, image_set='train_noval',mode='segmentation',\
             rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+        print('Success Load VOC and SBD Dataset')    
         #COCO dataset 
         if args.extra_coco:
+            print('Loading COCO Dataset')
             extra_COCO = cu.get_coco(args.dataroot_coco,'train',rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+            print('Success COCO Dataset')  
         # Concatene dataset
         train_dataset_unsup = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
+        num_classes = 21
     else:
         print('Loading Landscape Dataset')
         train_dataset_unsup = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
-            rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+            rotate=args.rotate,pi_rotate=args.pi_rotate,size_img=size_img,size_crop=size_crop)
         test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
+        num_classes = 4 # 3 bug dont know why 
         print('Success load Landscape Dataset')
 
     # Split dataset
@@ -130,9 +137,9 @@ def main():
     else:
         save_dir = U.create_save_directory(args.save_dir) # Create a new save directory
         if args.model.upper()=='FCN':
-            model = models.segmentation.fcn_resnet101(pretrained=args.pretrained)
+            model = models.segmentation.fcn_resnet101(pretrained=args.pretrained,num_classes=num_classes)
         elif args.model.upper()=='DLV3':
-            model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained)
+            model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained,num_classes=num_classes)
         else:
             raise Exception('model must be "FCN" or "DLV3"')
         model.to(device)
@@ -148,13 +155,13 @@ def main():
     # Auto lr finding
     #if args.auto_lr==True:
 
-    criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
+    criterion_supervised = nn.CrossEntropyLoss(ignore_index=num_classes) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
     ev.train_rot_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
             model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
-            ,device=device)
+            ,device=device,num_classes=num_classes)
 
     # Final evaluation
     """

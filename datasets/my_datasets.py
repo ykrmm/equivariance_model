@@ -476,7 +476,8 @@ class LandscapeDataset(Dataset):
                  p_rotate = 0.25,
                  rotate = False,
                  scale = True,
-                 normalize=True):
+                 normalize=True,
+                 pi_rotate=True):
         super(LandscapeDataset).__init__()
 
         ## Transform
@@ -489,7 +490,8 @@ class LandscapeDataset(Dataset):
         self.p_rotate = p_rotate
         self.rotate = rotate
         self.scale = scale
-        self.normalize = normalize
+        self.normalize = normalize # Use un-normalize image for plotting
+        self.pi_rotate = pi_rotate # Use only rotation 90,180,270 rotations
         ##
 
         if image_set!= 'train' and image_set!='trainval' and image_set!='test':
@@ -529,14 +531,19 @@ class LandscapeDataset(Dataset):
                 
             if self.rotate:
                 if random.random() > self.p_rotate:
-                    if random.random() > 0.5:
-                        angle = np.random.randint(0,30)
+                    if self.pi_rotate:
+                        angle = int(np.random.choice([90,180,270],1,replace=True)) #Only pi/2 rotation
                         image = TF.rotate(image,angle=angle)
                         mask = TF.rotate(mask,angle=angle)
                     else:
-                        angle = np.random.randint(330,360)
-                        image = TF.rotate(image,angle=angle)
-                        mask = TF.rotate(mask,angle=angle)
+                        if random.random() > 0.5:
+                            angle = np.random.randint(0,30)
+                            image = TF.rotate(image,angle=angle)
+                            mask = TF.rotate(mask,angle=angle)
+                        else:
+                            angle = np.random.randint(330,360)
+                            image = TF.rotate(image,angle=angle)
+                            mask = TF.rotate(mask,angle=angle)
 
         
 

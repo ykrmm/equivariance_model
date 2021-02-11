@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
+    parser.add_argument('--pi_rotate', default=True, type=U.str2bool,help="Use only pi/2 rotation angle")
     parser.add_argument('--scale', default=True, type=U.str2bool,help="Use scale as data augmentation")
     parser.add_argument('--landcover', default=False, type=U.str2bool,\
          help="Use Landcover dataset instead of VOC and COCO")
@@ -60,17 +61,7 @@ def main():
     # ------------
     device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
     print("device used:",device)
-    # ------------
-    # model
-    # ------------
     
-    if args.model.upper()=='FCN':
-        model = models.segmentation.fcn_resnet101(pretrained=args.pretrained)
-    elif args.model.upper()=='DLV3':
-        model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained)
-    else:
-        raise Exception('model must be "FCN" or "DLV3"')
-    model.to(device)
     # ------------
     # data
     # ------------
@@ -91,13 +82,14 @@ def main():
             train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD,extra_COCO])
         else:
             train_dataset = tud.ConcatDataset([train_dataset_VOC,train_dataset_SBD])
+        num_classes = 21
     else:
         print('Loading Landscape Dataset')
         train_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
-            rotate=args.rotate,size_img=size_img,size_crop=size_crop)
+            rotate=args.rotate,pi_rotate=args.pi_rotate,size_img=size_img,size_crop=size_crop)
         test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
         print('Success load Landscape Dataset')
-
+        num_classes = 4
     
     split = args.split
     if split==True:
@@ -108,8 +100,19 @@ def main():
         pin_memory=args.pm,shuffle=True,drop_last=True)#,collate_fn=U.my_collate)
     dataloader_val = torch.utils.data.DataLoader(test_dataset,num_workers=args.nw,pin_memory=args.pm,\
         batch_size=args.batch_size)
-    # Decide which device we want to run on
+
     
+    # ------------
+    # model
+    # ------------
+    
+    if args.model.upper()=='FCN':
+        model = models.segmentation.fcn_resnet101(pretrained=args.pretrained,num_classes=num_classes)
+    elif args.model.upper()=='DLV3':
+        model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained,num_classes=num_classes)
+    else:
+        raise Exception('model must be "FCN" or "DLV3"')
+    model.to(device)
 
     
     # ------------
@@ -125,11 +128,12 @@ def main():
     # Auto lr finding
     #if args.auto_lr==True:
     
-    criterion = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
+    criterion = nn.CrossEntropyLoss(ignore_index=num_classes) # On ignore la classe border.
+    torch.autograd.set_detect_anomaly(True)
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd)
     ev.train_fully_supervised(model=model,n_epochs=args.n_epochs,train_loader=dataloader_train,val_loader=dataloader_val,\
         criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,model_name=args.model_name,\
-            benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=21)
+            benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=num_classes)
 
 
 

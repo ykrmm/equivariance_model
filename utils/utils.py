@@ -29,7 +29,7 @@ VOC_CLASSES = ('background',  # always index 0
 LANDCOVER_CLASS = ('building','woodlands','water')
 
 NUM_CLASSES = len(VOC_CLASSES) + 1
-def get_voc_cst() -> (tuple,int):
+def get_voc_cst():
     
     return VOC_CLASSES,NUM_CLASSES
 
