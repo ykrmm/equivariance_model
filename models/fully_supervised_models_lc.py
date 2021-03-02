@@ -35,6 +35,7 @@ def main():
         "If true, it'll eval the model with different angle input size")
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
     parser.add_argument('--pi_rotate', default=True, type=U.str2bool,help="Use only pi/2 rotation angle")
+    parser.add_argument('--p_rotate', default=0.25, type=float,help="Probability of rotating the image during the training")
     parser.add_argument('--scale', default=True, type=U.str2bool,help="Use scale as data augmentation")
     parser.add_argument('--landcover', default=False, type=U.str2bool,\
          help="Use Landcover dataset instead of VOC and COCO")
@@ -86,7 +87,7 @@ def main():
     else:
         print('Loading Landscape Dataset')
         train_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
-            rotate=args.rotate,pi_rotate=args.pi_rotate,size_img=size_img,size_crop=size_crop)
+            rotate=args.rotate,pi_rotate=args.pi_rotate,p_rotate=args.p_rotate,size_img=size_img,size_crop=size_crop)
         test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
         print('Success load Landscape Dataset')
         num_classes = 4

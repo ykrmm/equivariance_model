@@ -148,7 +148,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
 ###########################################################################################################################|
 
 def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,angle_max=30):
+                        optimizer,gamma,Loss,device,num_classes=21,angle_max=30):
     """
         A training epoch for rotational equivariance using for semantic segmentation
     """
@@ -180,7 +180,7 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         l_loss_equiv.append(float(loss_equiv))
         l_loss_sup.append(float(loss_sup))
         equiv_acc.append(acc)
-    state = eval_model(model,train_loader_equiv,device=device,num_classes=21)
+    state = eval_model(model,train_loader_equiv,device=device,num_classes=num_classes)
     iou = state.metrics['mean IoU']
     accuracy = state.metrics['accuracy']
     d = {'loss':np.array(l_loss).mean(),'loss_equiv':np.array(l_loss_equiv).mean(),\
@@ -226,7 +226,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
         print("EPOCH",ep)
         # TRAINING
         d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,angle_max=30)
+                        optimizer,gamma,Loss,device,angle_max=angle_max,num_classes=num_classes)
         if scheduler:
             lr_scheduler.step()
         combine_loss_train.append(d['loss'])
@@ -252,12 +252,13 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
                 equiv_acc, m_loss_equiv = U.eval_accuracy_equiv(model,val_loader,criterion=criterion_unsupervised,\
                                 nclass=21,device=device,Loss=Loss,plot=False,angle_max=angle_max,random_angle=False)
                 loss_test_unsup.append(m_loss_equiv)
-                equiv_accuracy_test.append(equiv_acc)    
+                equiv_accuracy_test.append(equiv_acc)  
+                """  
                 print('VOC Dataset Train')
-                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=True,device=device)
+                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=True,device=device,num_classes=num_classes)
                 print('VOC Dataset Val')
-                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=False,device=device)
-                ## Save model
+                _ = eval_model_all_angle(model,size_img,dataroot_voc,train=False,device=device,num_classes=num_classes)
+                ## Save model"""
                 U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
 
     U.save_curves(path=save_folder,combine_loss_train=combine_loss_train,loss_train_sup=loss_train_sup,\
