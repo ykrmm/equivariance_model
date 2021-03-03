@@ -248,6 +248,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
             iou_test.append(iou)
             accuracy_test.append(acc)
             print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+            # SAVING MODEL
             U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
             
             
