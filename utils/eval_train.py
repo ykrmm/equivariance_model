@@ -248,6 +248,9 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
             iou_test.append(iou)
             accuracy_test.append(acc)
             print('TEST - EP:',ep,'iou:',iou,'Accuracy:',acc,'Loss CE',loss)
+            U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
+            
+            
             if ep%eval_every==0: # Eval loss equiv and equivariance accuracy for the validation dataset
                 equiv_acc, m_loss_equiv = U.eval_accuracy_equiv(model,val_loader,criterion=criterion_unsupervised,\
                                 nclass=21,device=device,Loss=Loss,plot=False,angle_max=angle_max,random_angle=False)
@@ -259,7 +262,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
                 print('VOC Dataset Val')
                 _ = eval_model_all_angle(model,size_img,dataroot_voc,train=False,device=device,num_classes=num_classes)
                 ## Save model"""
-                U.save_model(model,save_all_ep,save_best,save_folder,model_name,ep=ep,iou=iou,iou_test=iou_test)
+                
 
     U.save_curves(path=save_folder,combine_loss_train=combine_loss_train,loss_train_sup=loss_train_sup,\
     loss_train_unsup=loss_train_unsup,iou_train=iou_train,accuracy_train=accuracy_train,equiv_accuracy_train=equiv_accuracy_train,\

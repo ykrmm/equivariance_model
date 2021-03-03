@@ -9,6 +9,7 @@ import torchvision.transforms as T
 from torchvision.datasets.vision import VisionDataset
 from torch.utils.data import Dataset
 import xml.etree.ElementTree as ET
+import PIL
 from PIL import Image
 import random
 import shutil
@@ -463,6 +464,14 @@ class SBDataset(VisionDataset):
         return '\n'.join(lines).format(**self.__dict__)
 
 
+###########################################################################################
+###########################################################################################
+#                                                                                         #
+#                                      LANDSCAPE                                          #
+#                                                                                         #
+###########################################################################################
+###########################################################################################
+
 class LandscapeDataset(Dataset):
     def __init__(self,
                  dataroot,
@@ -476,8 +485,10 @@ class LandscapeDataset(Dataset):
                  p_rotate = 0.25,
                  rotate = False,
                  scale = True,
-                 normalize=True,
-                 pi_rotate=True):
+                 normalize = True,
+                 pi_rotate = True,
+                 fixing_rotate = False,
+                 angle_fix = 0):
         super(LandscapeDataset).__init__()
 
         ## Transform
@@ -492,6 +503,12 @@ class LandscapeDataset(Dataset):
         self.scale = scale
         self.normalize = normalize # Use un-normalize image for plotting
         self.pi_rotate = pi_rotate # Use only rotation 90,180,270 rotations
+        self.fixing_rotate = fixing_rotate # For test time, allow to eval a model on the dataset with a certain angle
+        self.angle_fix = angle_fix # The angle used for the fixing rotation
+
+        if fixing_rotate: 
+            self.rotate = False
+
         ##
 
         if image_set!= 'train' and image_set!='trainval' and image_set!='test':
@@ -545,6 +562,10 @@ class LandscapeDataset(Dataset):
                             image = TF.rotate(image,angle=angle)
                             mask = TF.rotate(mask,angle=angle)
 
+        # Apply a fixed rotation for test time:
+        if self.fixing_rotate:
+            image = TF.rotate(image,angle=self.angle_fix)
+            mask = TF.rotate(mask,angle=self.angle_fix)
         
 
         # Transform to tensor
