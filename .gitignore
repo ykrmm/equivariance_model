@@ -147,6 +147,8 @@ saved_model/
 *nohup.out*
 */nohup.out
 *.out
+*.sh
+models/*.sh
 #utils_on_gpu/
 #utils_on_gpu
 #utils_on_gpu/*
