@@ -49,8 +49,8 @@ def main():
     parser.add_argument('--extra_coco', default=False, type=U.str2bool,\
          help="Use coco dataset as extra annotation for fully supervised training")
     parser.add_argument('--multi_task', default=False, type=U.str2bool, help="Multi task training (same data for equiv and sup)")
-    parser.add_argument('--dataroot_voc', default='~/data/voc2012', type=str)
-    parser.add_argument('--dataroot_sbd', default='~/data/sbd', type=str)
+    parser.add_argument('--dataroot_voc', default='/share/DEEPLEARNING/datasets/voc2012', type=str)
+    parser.add_argument('--dataroot_sbd', default='/share/DEEPLEARNING/datasets/sbd', type=str)
     parser.add_argument('--dataroot_coco', default='/share/DEEPLEARNING/datasets/coco', type=str)
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
