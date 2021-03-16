@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--wd', type=float, default=2e-4)
     parser.add_argument('--moment', type=float, default=0.9)
     parser.add_argument('--batch_size', default=5, type=int)
+    parser.add_argument('--iter_every', default=1, type=int,help="Accumulate compute graph for iter_size step")
     parser.add_argument('--n_epochs', default=10, type=int)
     parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
@@ -141,7 +142,7 @@ def main():
     criterion_supervised = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd) 
     ev.train_rot_equiv(model,args.n_epochs,dataloader_train_sup,train_dataset_unsup,dataloader_val,criterion_supervised,optimizer,\
-        scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,save_folder=save_dir,\
+        scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,iter_every=args.iter_every,save_folder=save_dir,\
             model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
             ,device=device)

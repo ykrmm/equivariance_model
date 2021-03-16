@@ -148,7 +148,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
 ###########################################################################################################################|
 
 def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,num_classes=21,angle_max=30):
+                        optimizer,gamma,Loss,device,num_classes=21,angle_max=30,iter_every=1):
     """
         A training epoch for rotational equivariance using for semantic segmentation
     """
@@ -157,8 +157,9 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
     l_loss = []
     equiv_acc = [] # Equivariance accuracy btwn the mask of the input rotated image and the mask of non rotated image
     model.train()
-    for batch_sup,batch_unsup in zip(train_loader_sup,train_loader_equiv):
-        optimizer.zero_grad()
+    optimizer.zero_grad()
+    for i,(batch_sup,batch_unsup) in enumerate(zip(train_loader_sup,train_loader_equiv)):
+        
         if random.random() > 0.5: # I use this to rotate the image on the left and on the right during training.
             angle = np.random.randint(0,angle_max)
         else:
@@ -175,7 +176,12 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         loss_sup = criterion_supervised(pred,mask)
         loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
         loss.backward()
-        optimizer.step()
+
+        if (i+1)% iter_every == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+
+
         l_loss.append(float(loss))
         l_loss_equiv.append(float(loss_equiv))
         l_loss_sup.append(float(loss_sup))
@@ -188,7 +194,7 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
     return d
 
 def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_loader,criterion_supervised,optimizer,scheduler,\
-        Loss,gamma,batch_size,save_folder,model_name,benchmark=False,angle_max=30,size_img=520,\
+        Loss,gamma,batch_size,iter_every,save_folder,model_name,benchmark=False,angle_max=30,size_img=520,\
         eval_every=5,save_all_ep=True,dataroot_voc='~/data/voc2012',save_best=False, device='cpu',num_classes=21):
     """
         A complete training of rotation equivariance supervised model. 

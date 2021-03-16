@@ -13,6 +13,7 @@ from string import digits
 import sys
 import os
 import random
+import torchvision.transforms.functional as TF
 ###########################################################################################################################|
 #--------------------------------------------------------------------------------------------------------------------------|
 #                                            CONSTANTS AND TYPES
@@ -253,6 +254,7 @@ def rotate_image(image,angle,reshape=False):
         Rotate a tensor with a certain angle.
         If true, expands the output image to make it large enough to hold the entire rotated image.
         Else it keeps the same size
+        Depreciated...
     """
     #image = image.squeeze()
     if len(image.size())==3: # Case of a single image.
@@ -265,6 +267,16 @@ def rotate_image(image,angle,reshape=False):
     im = scipy_rotate(image.numpy(),angle=angle,reshape=reshape,axes=axes)
     im_t = torch.FloatTensor(im)
     return (im_t,360-angle)
+
+def rotate_pt(img,angle,reshape=False):
+    """
+        Rotate a tensor with a certain angle.
+        If true, expands the output image to make it large enough to hold the entire rotated image.
+        Else it keeps the same size
+    """
+    img = TF.rotate(img,angle=30,expand=reshape)
+
+    return (img,360-angle)
 
 
 def rotate_mask(mask,angle,reshape=False):
@@ -297,7 +309,8 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
        reshape = True to allow to grow the images during the rotation to not loose the border
     """
     x = x.to(device)
-    rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape)
+    #rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape) #Depreciated
+    rot_x,_ = rotate_pt(x,angle=angle,reshape=reshape)
     logsoftmax = nn.LogSoftmax(dim=1) #LogSoftmax using instead of softmax then log.
     softmax = nn.Softmax(dim=1)
     try:
@@ -306,7 +319,8 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
     except:
         pred_x = model(x.to(device))
         pred_rot = model(rot_x.to(device))    
-    pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Apply the rotation on the mask with the original input
+    #pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # Depreciated
+    pred_rot_x,_ = rotate_pt(pred_x,angle,reshape=reshape) # Apply the rotation on the mask with the original input
     if Loss=='KL':
         loss = criterion(logsoftmax(pred_rot_x.cpu()),softmax(pred_rot.cpu())) #KL divergence between the two predictions
         loss = loss/ (pred_x.size()[2]*pred_x.size()[3]) # Divide by the number of pixel in the image. Essential for batchmean mode in KLDiv
@@ -314,7 +328,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
         loss = criterion(pred_rot.cpu(),pred_rot_x.argmax(dim=1).detach().cpu()) # Use the prediction on the original image as GTruth.  
     else:
         loss = criterion(pred_rot_x.cpu(),pred_rot.cpu()) # For loss L1, MSE…    
-    acc = scores(pred_rot_x.argmax(dim=1).detach().cpu(),pred_rot.argmax(dim=1).detach().cpu())["Pixel Accuracy"]
+    acc = int(torch.sum(pred_rot_x.argmax(dim=1)==pred_rot.argmax(dim=1))/(pred_rot.size()[0]*pred_rot.size()[1]))
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
         class_pred = plot_equiv_mask(pred_rot.argmax(dim=1).detach().cpu()[0],pred_rot_x.argmax(dim=1).detach().cpu()[0])
