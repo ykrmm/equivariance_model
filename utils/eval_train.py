@@ -232,7 +232,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
         print("EPOCH",ep)
         # TRAINING
         d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,angle_max=angle_max,num_classes=num_classes)
+                        optimizer,gamma,Loss,device,angle_max=angle_max,num_classes=num_classes,iter_every=iter_every)
         if scheduler:
             lr_scheduler.step()
         combine_loss_train.append(d['loss'])
