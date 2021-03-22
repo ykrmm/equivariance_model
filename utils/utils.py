@@ -328,7 +328,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
         loss = criterion(pred_rot.cpu(),pred_rot_x.argmax(dim=1).detach().cpu()) # Use the prediction on the original image as GTruth.  
     else:
         loss = criterion(pred_rot_x.cpu(),pred_rot.cpu()) # For loss L1, MSE…    
-    acc = int(torch.sum(pred_rot_x.argmax(dim=1)==pred_rot.argmax(dim=1))/(pred_rot.size()[0]*pred_rot.size()[1]))
+    acc = float(torch.sum(pred_rot_x.argmax(dim=1)==pred_rot.argmax(dim=1))/(pred_rot.size()[0]*pred_rot.size()[1]))
     # compare the pred on the original images and the pred on the rotated images put back in place
     if plot:
         class_pred = plot_equiv_mask(pred_rot.argmax(dim=1).detach().cpu()[0],pred_rot_x.argmax(dim=1).detach().cpu()[0])
