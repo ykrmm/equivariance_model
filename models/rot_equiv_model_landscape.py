@@ -54,6 +54,7 @@ def main():
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=U.str2bool,help="Pin memory for the dataloader")
     parser.add_argument('--gpu', default=0, type=int,help="Wich gpu to select for training")
+    parser.add_argument('--rot_cpu', default=False, type=U.str2bool, help="Apply rotation on the cpu (Help to use less gpu memory)")
     parser.add_argument('--split', default=True, type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--multi_task', default=False, type=U.str2bool, help="Multi task training (same data for equiv and sup)")
@@ -176,7 +177,7 @@ def main():
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,iter_every=args.iter_every,\
             save_folder=save_dir,model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
-            ,device=device,num_classes=num_classes)
+           ,rot_cpu=args.rot_cpu ,device=device,num_classes=num_classes)
 
     # Final evaluation
     """

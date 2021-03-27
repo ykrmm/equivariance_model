@@ -148,7 +148,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
 ###########################################################################################################################|
 
 def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,num_classes=21,angle_max=30,iter_every=1):
+                        optimizer,gamma,Loss,device,rot_cpu=False,num_classes=21,angle_max=30,iter_every=1):
     """
         A training epoch for rotational equivariance using for semantic segmentation
     """
@@ -167,14 +167,15 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         x_unsup,_ = batch_unsup
         loss_equiv,acc = U.compute_transformations_batch(x_unsup,model,angle,reshape=False,\
                                                      criterion=criterion_unsupervised,Loss = Loss,\
-                                                       device=device)
+                                                       rot_cpu=rot_cpu,device=device)
         x,mask = batch_sup
         x = x.to(device)
         mask = mask.to(device)
         pred = model(x)["out"]
         loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
         loss_sup = criterion_supervised(pred,mask)
-        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss              
+        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss   
+        loss = loss/iter_every           
         loss.backward()
 
         if (i+1)% iter_every == 0:
@@ -195,7 +196,7 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
 
 def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_loader,criterion_supervised,optimizer,scheduler,\
         Loss,gamma,batch_size,iter_every,save_folder,model_name,benchmark=False,angle_max=30,size_img=520,\
-        eval_every=5,save_all_ep=True,dataroot_voc='~/data/voc2012',save_best=False, device='cpu',num_classes=21):
+        eval_every=5,save_all_ep=True,dataroot_voc='~/data/voc2012',save_best=False,rot_cpu=False, device='cpu',num_classes=21):
     """
         A complete training of rotation equivariance supervised model. 
         save_folder : Path to save the model, the courb of losses,metric...
@@ -232,7 +233,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
         print("EPOCH",ep)
         # TRAINING
         d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,angle_max=angle_max,num_classes=num_classes,iter_every=iter_every)
+                        optimizer,gamma,Loss,rot_cpu=rot_cpu,device=device,angle_max=angle_max,num_classes=num_classes,iter_every=iter_every)
         if scheduler:
             lr_scheduler.step()
         combine_loss_train.append(d['loss'])

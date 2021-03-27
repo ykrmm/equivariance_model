@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--learning_rate', type=float, default=10e-4)
     parser.add_argument('--Loss', type=str, default='KL')
     parser.add_argument('--gamma', type=float, default=0.5,help="gamma balance the two losses")
-    parser.add_argument('--scheduler', type=U.str2bool, default=False)
+    parser.add_argument('--scheduler', type=U.str2bool, default=True)
     parser.add_argument('--wd', type=float, default=2e-4)
     parser.add_argument('--moment', type=float, default=0.9)
     parser.add_argument('--batch_size', default=5, type=int)
@@ -44,6 +44,7 @@ def main():
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=U.str2bool,help="Pin memory for the dataloader")
     parser.add_argument('--gpu', default=0, type=int,help="Wich gpu to select for training")
+    parser.add_argument('--rot_cpu', default=False, type=U.str2bool, help="Apply rotation on the cpu (Help to use less gpu memory)")
     parser.add_argument('--benchmark', default=False, type=U.str2bool, help="enable or disable backends.cudnn")
     parser.add_argument('--split', default=True, type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
@@ -145,7 +146,7 @@ def main():
         scheduler=args.scheduler,Loss=args.Loss,gamma=args.gamma,batch_size=args.batch_size,iter_every=args.iter_every,save_folder=save_dir,\
             model_name=args.model_name,benchmark=args.benchmark,angle_max=args.angle_max,size_img=args.size_img,\
         eval_every=args.eval_every,save_all_ep=args.save_all_ep,dataroot_voc=args.dataroot_voc,save_best=args.save_best\
-            ,device=device)
+            ,rot_cpu=args.rot_cpu,device=device)
 
     # Final evaluation
     """

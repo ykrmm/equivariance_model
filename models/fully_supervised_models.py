@@ -41,8 +41,8 @@ def main():
     parser.add_argument('--benchmark', default=False, type=U.str2bool, help="enable or disable backends.cudnn")
     parser.add_argument('--split', default=False, type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
-    parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
-    parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
+    parser.add_argument('--dataroot_voc', default='/share/DEEPLEARNING/datasets/voc2012/', type=str)
+    parser.add_argument('--dataroot_sbd', default='/share/DEEPLEARNING/datasets/sbd/', type=str)
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
     parser.add_argument('--save_all_ep', default=False, type=U.str2bool,help=\
