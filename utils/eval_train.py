@@ -159,7 +159,7 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
     model.train()
     optimizer.zero_grad()
     for i,(batch_sup,batch_unsup) in enumerate(zip(train_loader_sup,train_loader_equiv)):
-        
+        optimizer.zero_grad()
         if random.random() > 0.5: # I use this to rotate the image on the left and on the right during training.
             angle = np.random.randint(0,angle_max)
         else:
@@ -174,13 +174,10 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         pred = model(x)["out"]
         loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
         loss_sup = criterion_supervised(pred,mask)
-        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss   
-        loss = loss/iter_every           
+        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss             
         loss.backward()
-
-        if (i+1)% iter_every == 0:
-            optimizer.step()
-            optimizer.zero_grad()
+        optimizer.step()
+        
 
 
         l_loss.append(float(loss))
