@@ -12,8 +12,7 @@ import random
 import get_datasets as gd
 from matplotlib import colors
 import os
-
-
+from torch_lr_finder import LRFinder
 ##############
 
 
@@ -88,7 +87,7 @@ def eval_model(model,val_loader,device='cpu',num_classes=21):
     #print("CE Loss :",state.metrics['CE Loss'])
     
     return state
-def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,scheduler,\
+def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,optimizer,scheduler,auto_lr,\
         save_folder,model_name,benchmark=False,save_all_ep=True, save_best=False, device='cpu',num_classes=21):
     """
         A complete training of fully supervised model. 
@@ -96,18 +95,27 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
         benchmark : enable or disable backends.cudnn 
         save_all_ep : if True, the model is saved at each epoch in save_folder
         scheduler : if True, the model will apply a lr scheduler during training
+        auto_lr : Auto lr finder 
     """
     torch.backends.cudnn.benchmark=benchmark
+    
+    if auto_lr:
+        print('Auto finder for the Learning rate')
+        lr_finder = LRFinder(model, optimizer, criterion,memory_cache=False,cache_dir='/tmp', device=device)
+        lr_finder.range_test(train_loader,start_lr=10e-5, end_lr=10, num_iter=100)
+    
     if scheduler:
         lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
         lambda x: (1 - x / (len(train_loader) * n_epochs)) ** 0.9)
+
     loss_test = []
     loss_train = []
     iou_train = []
     iou_test = []
     accuracy_train = []
     accuracy_test = []
+    model.to(device)
     for ep in range(n_epochs):
         print("EPOCH",ep)
         model.train()

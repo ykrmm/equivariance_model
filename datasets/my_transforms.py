@@ -49,7 +49,7 @@ class RandomRotate(object):
         self.angle = angle
         self.p_rotate = p_rotate
 
-    def __call__(self,image,target):
+    def __call__(self,image,mask):
         if random.random() > self.p_rotate:
             if random.random() > 0.5:
                 angle = np.random.randint(0,self.angle)

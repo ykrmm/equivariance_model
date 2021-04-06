@@ -14,7 +14,6 @@ from argparse import ArgumentParser
 import torch.utils.data as tud
 
 
-
 def main():
     #torch.manual_seed(42)
 
@@ -22,6 +21,8 @@ def main():
     # args
     # ------------
     parser = ArgumentParser()
+
+    # Learning parameters
     parser.add_argument('--auto_lr', type=U.str2bool, default=False,help="Auto lr finder")
     parser.add_argument('--learning_rate', type=float, default=10e-4)
     parser.add_argument('--scheduler', type=U.str2bool, default=False)
@@ -29,10 +30,17 @@ def main():
     parser.add_argument('--moment', type=float, default=0.9)
     parser.add_argument('--batch_size', default=5, type=int)
     parser.add_argument('--n_epochs', default=10, type=int)
+    parser.add_argument('--iter_every', default=1, type=int,help="Accumulate compute graph for iter_size step")
+    parser.add_argument('--benchmark', default=False, type=U.str2bool, help="enable or disable backends.cudnn")
+    
+    # Model and eval
     parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
     parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
+    
+    
+    # Data augmentation
     parser.add_argument('--rotate', default=False, type=U.str2bool,help="Use random rotation as data augmentation")
     parser.add_argument('--pi_rotate', default=True, type=U.str2bool,help="Use only pi/2 rotation angle")
     parser.add_argument('--p_rotate', default=0.25, type=float,help="Probability of rotating the image during the training")
@@ -41,15 +49,20 @@ def main():
          help="Use Landcover dataset instead of VOC and COCO")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
+    
+    # Dataloader and gpu
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
     parser.add_argument('--pm', default=True, type=U.str2bool,help="Pin memory for the dataloader")
     parser.add_argument('--gpu', default=0, type=int,help="Wich gpu to select for training")
-    parser.add_argument('--benchmark', default=False, type=U.str2bool, help="enable or disable backends.cudnn")
+    
+    # Datasets 
     parser.add_argument('--split', default=False, type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
     parser.add_argument('--dataroot_landcover', default='/users/k/karmimy/data/landcover', type=str)
+    
+    # Save parameters
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
     parser.add_argument('--save_dir', default='/data/save_model', type=str)
     parser.add_argument('--save_all_ep', default=False, type=U.str2bool,help=\
@@ -113,7 +126,7 @@ def main():
         model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained,num_classes=num_classes)
     else:
         raise Exception('model must be "FCN" or "DLV3"')
-    model.to(device)
+    #model.to(device)
 
     
     # ------------
@@ -127,14 +140,16 @@ def main():
     # training
     # ------------
     # Auto lr finding
-    #if args.auto_lr==True:
+    
     
     criterion = nn.CrossEntropyLoss(ignore_index=num_classes) # On ignore la classe border.
     torch.autograd.set_detect_anomaly(True)
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd)
+    
     ev.train_fully_supervised(model=model,n_epochs=args.n_epochs,train_loader=dataloader_train,val_loader=dataloader_val,\
-        criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,model_name=args.model_name,\
-            benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=num_classes)
+        criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,auto_lr=args.auto_lr,\
+            model_name=args.model_name,benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,\
+                device=device,num_classes=num_classes)
 
 
 
