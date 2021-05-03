@@ -311,7 +311,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
     """
     x = x.to(device)
     if rot_cpu:
-        rot_x,_= rotate_image(x.detach().cpu(),angle=angle,reshape=reshape) 
+        rot_x,_= rotate_pt(x.detach().cpu(),angle=angle,reshape=reshape) 
     else:
         rot_x,_ = rotate_pt(x,angle=angle,reshape=reshape)
     logsoftmax = nn.LogSoftmax(dim=1) #LogSoftmax using instead of softmax then log.
