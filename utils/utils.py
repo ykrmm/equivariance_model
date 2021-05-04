@@ -324,7 +324,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
         pred_rot = model(rot_x.to(device))
 
     if rot_cpu:    
-        pred_rot_x = rotate_mask(pred_x.detach().cpu(),angle,reshape=reshape) # CPU rotation 
+        pred_rot_x,_ = rotate_pt(pred_x.detach().cpu(),angle,reshape=reshape) # CPU rotation 
     else:
         pred_rot_x,_ = rotate_pt(pred_x,angle,reshape=reshape) # Apply the rotation on the mask with the original input
 
