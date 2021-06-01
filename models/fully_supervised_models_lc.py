@@ -49,6 +49,7 @@ def main():
          help="Use Landcover dataset instead of VOC and COCO")
     parser.add_argument('--size_img', default=520, type=int,help="Size of input images")
     parser.add_argument('--size_crop', default=480, type=int,help="Size of crop image during training")
+    parser.add_argument('--angle_max', default=360, type=int,help="Angle max for data augmentation")
     
     # Dataloader and gpu
     parser.add_argument('--nw', default=0, type=int,help="Num workers for the data loader")
@@ -60,7 +61,7 @@ def main():
     parser.add_argument('--split_ratio', default=0.3, type=float, help="Amount of data we used for training")
     parser.add_argument('--dataroot_voc', default='/data/voc2012', type=str)
     parser.add_argument('--dataroot_sbd', default='/data/sbd', type=str)
-    parser.add_argument('--dataroot_landcover', default='/users/k/karmimy/data/landcover', type=str)
+    parser.add_argument('--dataroot_landcover', default='/share/DEEPLEARNING/datasets/landcover', type=str)
     
     # Save parameters
     parser.add_argument('--model_name', type=str,help="what name to use for saving")
@@ -100,7 +101,7 @@ def main():
     else:
         print('Loading Landscape Dataset')
         train_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
-            rotate=args.rotate,pi_rotate=args.pi_rotate,p_rotate=args.p_rotate,size_img=size_img,size_crop=size_crop)
+            rotate=args.rotate,pi_rotate=args.pi_rotate,p_rotate=args.p_rotate,size_img=size_img,size_crop=size_crop,angle_max=args.angle_max)
         test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
         print('Success load Landscape Dataset')
         num_classes = 4
@@ -140,7 +141,7 @@ def main():
     # training
     # ------------
     # Auto lr finding
-    
+    print(args)
     
     criterion = nn.CrossEntropyLoss(ignore_index=num_classes) # On ignore la classe border.
     torch.autograd.set_detect_anomaly(True)

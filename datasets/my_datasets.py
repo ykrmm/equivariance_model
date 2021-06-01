@@ -488,7 +488,8 @@ class LandscapeDataset(Dataset):
                  normalize = True,
                  pi_rotate = True,
                  fixing_rotate = False,
-                 angle_fix = 0):
+                 angle_fix = 0,
+                 angle_max = 360):
         super(LandscapeDataset).__init__()
 
         ## Transform
@@ -505,6 +506,7 @@ class LandscapeDataset(Dataset):
         self.pi_rotate = pi_rotate # Use only rotation 90,180,270 rotations
         self.fixing_rotate = fixing_rotate # For test time, allow to eval a model on the dataset with a certain angle
         self.angle_fix = angle_fix # The angle used for the fixing rotation
+        self.angle_max = angle_max
 
         if fixing_rotate: 
             self.rotate = False
@@ -534,7 +536,22 @@ class LandscapeDataset(Dataset):
         image = resize(image)
         mask = resize(mask)
 
-        if self.train : 
+        if self.train :
+            if self.rotate:
+                if random.random() > self.p_rotate:
+                    if self.pi_rotate:
+                        angle = int(np.random.choice([90,180,270],1,replace=True)) #Only pi/2 rotation
+                        image = TF.rotate(image,angle=angle)
+                        mask = TF.rotate(mask,angle=angle)
+                    else:
+                        if random.random() > 0.5:
+                            angle = np.random.randint(0,self.angle_max)
+                            image = TF.rotate(image,angle=angle,expand=True)
+                            mask = TF.rotate(mask,angle=angle,expand=True)
+                        else:
+                            angle = np.random.randint(360-self.angle_max,360)
+                            image = TF.rotate(image,angle=angle,expand=True)
+                            mask = TF.rotate(mask,angle=angle,expand=True) 
             # Random crop
             i, j, h, w = T.RandomCrop.get_params(
                 image, output_size=self.size_crop)
@@ -546,21 +563,7 @@ class LandscapeDataset(Dataset):
                 image = TF.hflip(image)
                 mask = TF.hflip(mask)
                 
-            if self.rotate:
-                if random.random() > self.p_rotate:
-                    if self.pi_rotate:
-                        angle = int(np.random.choice([90,180,270],1,replace=True)) #Only pi/2 rotation
-                        image = TF.rotate(image,angle=angle)
-                        mask = TF.rotate(mask,angle=angle)
-                    else:
-                        if random.random() > 0.5:
-                            angle = np.random.randint(0,30)
-                            image = TF.rotate(image,angle=angle)
-                            mask = TF.rotate(mask,angle=angle)
-                        else:
-                            angle = np.random.randint(330,360)
-                            image = TF.rotate(image,angle=angle)
-                            mask = TF.rotate(mask,angle=angle)
+            
 
         # Apply a fixed rotation for test time:
         if self.fixing_rotate:

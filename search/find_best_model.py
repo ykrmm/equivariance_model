@@ -32,7 +32,13 @@ def find_best_model_(iou_file='iou_test.npy',**kwargs):
         launch_search = True
         print('Search in',f)
         for k in kwargs.items():
-            if k[0]!='folder' and k[1] is not None:
+            if k[0]=='model':
+                s = re.findall(r'\'(.*?)\'', param)
+                for n in s: 
+                    if n =='DLV3' or n =='FCN':
+                        if not str(n) == str(k[1]):
+                            launch_search = False 
+            elif k[0]!='folder' and k[1] is not None:
                 t = type(k[1])
                 search = k[0]+'='
                 s = re.search('(,\s)('+search+')(.*?)(?=,)',param,re.IGNORECASE) # search the argument in the param file
@@ -69,7 +75,12 @@ def load_best_model(iou_file='iou_test.npy',**kwargs):
         match = [] # Parameters in the file
         launch_search = True
         for k in kwargs.items():
-            if k[0]!='save_dir' and k[0]!='model_name' and k[1] is not None:
+            print('bruuuuh')
+            if k[0]=='model':
+                print('HERE')
+                print( re.findall(r'"(.*?)"', param))
+                
+            elif k[0]!='save_dir' and k[0]!='model_name' and k[1] is not None:
                 t = type(k[1])
                 search = k[0]+'='
                 s = re.search('('+search+')(.*?)(?=,)',param,re.IGNORECASE) # search the argument in the param file
@@ -120,8 +131,10 @@ def main():
     parser.add_argument('--split', type=U.str2bool, help="Split the dataset")
     parser.add_argument('--split_ratio', type=float, help="Amount of data we used for training")
     parser.add_argument('--batch_size', type=float, help="Batch size") 
-    parser.add_argument('--rotate', type=U.str2bool, help="Rotate")   
+    parser.add_argument('--rotate', type=U.str2bool, help="Rotate")  
+    parser.add_argument('--model', type=str, help="Model type : DLV3 or FCN")    
     args = parser.parse_args()
+    print(args.model)
 
     #print(**vars(args))
     print(args)
