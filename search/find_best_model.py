@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import numpy as np
 import re 
 import torch
+from os.path import join
 import sys
 sys.path.insert(1, '../utils')
 import utils as U
@@ -127,6 +128,17 @@ def main():
     best_dir,best = find_best_model_(**vars(args))
 
     print("The best model is in",best_dir,"with an iou of",best)
+    f = open(join(best_dir,'hparam.txt'), "r")
+    for line in f:
+        print(line)
+    f.close()
 
 if __name__ == '__main__':
     main() 
+
+
+"""
+List des dir
+/share/homes/karmimy/equiv/save_model
+adv_seg  fully_supervised  fully_supervised_lc  fully_supervised_monuseg  rot_equiv  rot_equiv_lc  rot_equiv_monuseg  scale_equiv
+"""

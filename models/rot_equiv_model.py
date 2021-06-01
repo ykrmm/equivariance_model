@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from torch.nn import functional as F 
 import sys
 sys.path.insert(1, '../utils')
-sys.path.insert(1, '../utils_on_gpu')
+sys.path.insert(1, '../search')
 sys.path.insert(1, '../datasets')
 import coco_utils as cu
 import my_datasets as mdset
