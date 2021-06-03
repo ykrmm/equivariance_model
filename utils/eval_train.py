@@ -219,7 +219,7 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
         lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
         lambda x: (1 - x / (len(train_loader_sup) * n_epochs)) ** 0.9)
-    criterion_unsupervised = U.get_criterion(Loss)
+    criterion_unsupervised = U.get_criterion(Loss,num_classes=num_classes)
     iou_train = []
     iou_test = []
     combine_loss_train = []
