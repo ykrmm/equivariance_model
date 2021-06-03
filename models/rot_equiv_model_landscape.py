@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from torch.nn import functional as F 
 import sys
 sys.path.insert(1, '../utils')
-sys.path.insert(1, '../utils_on_gpu')
+sys.path.insert(1, '../search')
 sys.path.insert(1, '../datasets')
 import coco_utils as cu
 import my_datasets as mdset
@@ -118,7 +118,7 @@ def main():
         train_dataset_unsup = mdset.LandscapeDataset(args.dataroot_landcover,image_set="trainval",\
             rotate=args.rotate,pi_rotate=args.pi_rotate,size_img=size_img,size_crop=size_crop)
         test_dataset = mdset.LandscapeDataset(args.dataroot_landcover,image_set="test")
-        num_classes = 4 # 3 bug dont know why 
+        num_classes = 4 
         print('Success load Landscape Dataset')
 
     # Split dataset

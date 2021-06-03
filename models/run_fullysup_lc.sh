@@ -3,7 +3,7 @@ save_repo=/share/homes/karmimy/equiv/save_model/fully_supervised_lc
 name=fcn_fully_sup_lc
 rotate=True
 gpu=2
-split=True
+split=False
 split_ratio=0.3
 
 #running command
