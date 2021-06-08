@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import argparse
+from torch.cuda.amp import autocast 
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataset import random_split
 import torch.nn as nn
@@ -316,6 +317,7 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
         rot_x,_ = rotate_pt(x,angle=angle,reshape=reshape)
     logsoftmax = nn.LogSoftmax(dim=1) #LogSoftmax using instead of softmax then log.
     softmax = nn.Softmax(dim=1)
+    #with autocast:
     try:
         pred_x = model(x.to(device))['out'] # a prediction of the original images.
         pred_rot = model(rot_x.to(device))['out'] # a prediction of the rotated images.

@@ -4,6 +4,7 @@ from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events, create_supervised_evaluator
 from ignite.metrics import Accuracy
 from ignite.metrics import ConfusionMatrix, mIoU,Accuracy,Loss
+from torch.cuda.amp import autocast, GradScaler
 import torch 
 import torch.nn as nn
 import numpy as np
@@ -156,7 +157,7 @@ def train_fully_supervised(model,n_epochs,train_loader,val_loader,criterion,opti
 ###########################################################################################################################|
 
 def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,device,rot_cpu=False,num_classes=21,angle_max=30,iter_every=1):
+                        optimizer,gamma,Loss,device,rot_cpu=False,num_classes=21,angle_max=30,scaler=None):
     """
         A training epoch for rotational equivariance using for semantic segmentation
     """
@@ -172,19 +173,26 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
             angle = np.random.randint(0,angle_max)
         else:
             angle = np.random.randint(360-angle_max,360)
+
+        
         x_unsup,_ = batch_unsup
         loss_equiv,acc = U.compute_transformations_batch(x_unsup,model,angle,reshape=False,\
-                                                     criterion=criterion_unsupervised,Loss = Loss,\
-                                                       rot_cpu=rot_cpu,device=device)
-        x,mask = batch_sup
-        x = x.to(device)
-        mask = mask.to(device)
-        pred = model(x)["out"]
-        loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
-        loss_sup = criterion_supervised(pred,mask)
-        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss             
-        loss.backward()
-        optimizer.step()
+                                                    criterion=criterion_unsupervised,Loss = Loss,\
+                                                    rot_cpu=rot_cpu,device=device)
+        with autocast():
+            x,mask = batch_sup
+            x = x.to(device)
+            mask = mask.to(device)
+            pred = model(x)["out"]
+            loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
+            loss_sup = criterion_supervised(pred,mask)
+            loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss 
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        #optimizer.step()
+
+        scaler.update()
         
 
 
@@ -232,13 +240,14 @@ def train_rot_equiv(model,n_epochs,train_loader_sup,train_dataset_unsup,val_load
     equiv_accuracy_test = []
     accuracy_test = []
     accuracy_train = []
+    scaler = GradScaler() # Mixed Precision
     for ep in range(n_epochs):
         train_loader_equiv = torch.utils.data.DataLoader(train_dataset_unsup,batch_size=batch_size,\
                                                      shuffle=True,drop_last=True)
         print("EPOCH",ep)
         # TRAINING
         d = train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_supervised,criterion_unsupervised,\
-                        optimizer,gamma,Loss,rot_cpu=rot_cpu,device=device,angle_max=angle_max,num_classes=num_classes,iter_every=iter_every)
+                        optimizer,gamma,Loss,rot_cpu=rot_cpu,device=device,angle_max=angle_max,num_classes=num_classes,scaler=scaler)
         if scheduler:
             lr_scheduler.step()
         combine_loss_train.append(d['loss'])

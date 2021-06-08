@@ -165,6 +165,9 @@ def main():
     # ------------    
     print('model will be saved in',save_dir)
     U.save_hparams(args,save_dir)
+
+    print('PARAMS')
+    print(args)
     # ------------
     # training
     # ------------
