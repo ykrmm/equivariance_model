@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--batch_size', default=5, type=int)
     parser.add_argument('--iter_every', default=1, type=int,help="Accumulate compute graph for iter_size step")
     parser.add_argument('--n_epochs', default=10, type=int)
-    parser.add_argument('--model', default='FCN', type=str,help="FCN or DLV3 model")
+    parser.add_argument('--model', default='DLV3', type=str,help="FCN or DLV3 model")
     parser.add_argument('--pretrained', default=False, type=U.str2bool,help="Use pretrained pytorch model")
     parser.add_argument('--eval_angle', default=True, type=U.str2bool,help=\
         "If true, it'll eval the model with different angle input size")
@@ -124,6 +124,7 @@ def main():
         if args.model.upper()=='FCN':
             model = models.segmentation.fcn_resnet101(pretrained=args.pretrained)
         elif args.model.upper()=='DLV3':
+            print('DEEPLAB MODEL')
             model = models.segmentation.deeplabv3_resnet50(pretrained=args.pretrained)
         else:
             raise Exception('model must be "FCN" or "DLV3"')

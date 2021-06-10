@@ -179,20 +179,20 @@ def train_step_rot_equiv(model,train_loader_sup,train_loader_equiv,criterion_sup
         loss_equiv,acc = U.compute_transformations_batch(x_unsup,model,angle,reshape=False,\
                                                     criterion=criterion_unsupervised,Loss = Loss,\
                                                     rot_cpu=rot_cpu,device=device)
-        with autocast():
-            x,mask = batch_sup
-            x = x.to(device)
-            mask = mask.to(device)
-            pred = model(x)["out"]
-            loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
-            loss_sup = criterion_supervised(pred,mask)
-            loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss 
+        
+        x,mask = batch_sup
+        x = x.to(device)
+        mask = mask.to(device)
+        pred = model(x)["out"]
+        loss_equiv = loss_equiv.to(device) # otherwise bug in combining the loss 
+        loss_sup = criterion_supervised(pred,mask)
+        loss = gamma*loss_sup + (1-gamma)*loss_equiv # combine loss 
 
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        #optimizer.step()
+        loss.backward()
+        #scaler.step(optimizer)
+        optimizer.step()
 
-        scaler.update()
+        #scaler.update()
         
 
 
