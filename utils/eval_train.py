@@ -3,7 +3,7 @@ from ignite.contrib.engines import common
 from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events, create_supervised_evaluator
 from ignite.metrics import Accuracy
-from ignite.metrics import ConfusionMatrix, mIoU,Accuracy,Loss
+from ignite.metrics import ConfusionMatrix, mIoU,Accuracy,Loss,IoU
 from torch.cuda.amp import autocast, GradScaler
 import torch 
 import torch.nn as nn
@@ -14,6 +14,7 @@ import get_datasets as gd
 from matplotlib import colors
 import os
 from torch_lr_finder import LRFinder
+from torchmetrics import IoU as IoU_lg
 ##############
 
 
@@ -59,6 +60,50 @@ def step_train_supervised(model,train_loader,criterion,optimizer,device='cpu',nu
     #print("CE Loss :",state.metrics['CE Loss'])
     
     return state
+
+def eval_model_tmetrics(model,val_loader,device,num_classes,ign_index=4):
+    model.to(device)
+    model.eval()
+    Miou = IoU_lg(num_classes=num_classes,ignore_index=ign_index)
+    L_iou = IoU_lg(num_classes=num_classes,ignore_index=ign_index,reduction='none')
+    Miou = Miou.to(device)
+    L_iou = L_iou.to(device)
+    for i,batch in enumerate(val_loader):
+        with torch.no_grad():
+            img, mask = batch
+            img = img.to(device)
+            mask = mask.to(device)
+            mask_pred = model(img)
+            """
+            print(mask_pred['out'].size())
+
+            if i == 3 or i ==7 or i ==4:  
+                print('mask unique')
+                print(i,torch.unique(mask[0]))
+                print('tensor')
+                print(i,mask[0])
+            """
+            try:
+                mask_pred = mask_pred['out'] 
+            except:
+                print('')
+            
+            size = (mask_pred.size()[2],mask_pred.size()[3])
+            mask_pred = torch.cat((mask_pred,torch.zeros(size).unsqueeze(dim=0).unsqueeze(dim=0).to(device)),dim=1)
+            #print('after cat',mask_pred.size())
+            softmax = nn.Softmax2d()
+            mask_pred = softmax(mask_pred)
+            mask_pred.to(device)
+            #print(mask_pred)
+            #print(mask)
+            Miou.update(mask_pred.to(device),mask.to(device))
+            L_iou.update(mask_pred.to(device),mask.to(device))
+    
+    miou = Miou.compute()
+    iou = L_iou.compute()
+
+    return miou,iou
+
     
 def eval_model(model,val_loader,device='cpu',num_classes=21):
 
@@ -77,7 +122,8 @@ def eval_model(model,val_loader,device='cpu',num_classes=21):
 
     val_evaluator = Engine(evaluate_function)
     cm = ConfusionMatrix(num_classes=num_classes)
-    mIoU(cm).attach(val_evaluator, 'mean IoU')   
+    mIoU(cm).attach(val_evaluator, 'mean IoU')
+    IoU(cm).attach(val_evaluator,'IoU') 
     Accuracy().attach(val_evaluator, "accuracy")
     Loss(loss_fn=nn.CrossEntropyLoss())\
     .attach(val_evaluator, "CE Loss")

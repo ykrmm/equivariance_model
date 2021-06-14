@@ -563,19 +563,20 @@ class LandscapeDataset(Dataset):
                 image = TF.hflip(image)
                 mask = TF.hflip(mask)
                 
-            
-
-        # Apply a fixed rotation for test time:
-        if self.fixing_rotate:
-            image = TF.rotate(image,angle=self.angle_fix)
-            mask = TF.rotate(mask,angle=self.angle_fix)
-        
 
         # Transform to tensor
         image = TF.to_tensor(image)
+        mask = to_tensor_target_lc(mask)
+        
+        # Apply a fixed rotation for test time:
+        if self.fixing_rotate:
+            image = TF.rotate(image,angle=self.angle_fix,expand=True,fill=4)
+            mask = mask.unsqueeze(0)
+            mask = TF.rotate(mask,angle=self.angle_fix,expand=True,fill=4)
+            mask = mask.squeeze()
         if self.normalize:
             image = TF.normalize(image,self.mean,self.std)
-        mask = to_tensor_target_lc(mask)
+        
         return image, mask
 
 

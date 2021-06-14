@@ -125,7 +125,7 @@ def main():
             model = models.segmentation.fcn_resnet101(pretrained=args.pretrained)
         elif args.model.upper()=='DLV3':
             print('DEEPLAB MODEL')
-            model = models.segmentation.deeplabv3_resnet50(pretrained=args.pretrained)
+            model = models.segmentation.deeplabv3_resnet101(pretrained=args.pretrained)
         else:
             raise Exception('model must be "FCN" or "DLV3"')
         model.to(device)
