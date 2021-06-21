@@ -1,8 +1,8 @@
 #parameters
 save_repo=/share/homes/karmimy/equiv/save_model/fully_supervised_lc
 name=fcn_fully_sup_lc
-rotate=False
-gpu=3
+rotate=True
+gpu=0
 split=True
 split_ratio=0.1
 

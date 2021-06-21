@@ -106,7 +106,7 @@ def main():
     criterion = nn.CrossEntropyLoss(ignore_index=21) # On ignore la classe border.
     optimizer = torch.optim.SGD(model.parameters(),lr=args.learning_rate,momentum=args.moment,weight_decay=args.wd)
     ev.train_fully_supervised(model=model,n_epochs=args.n_epochs,train_loader=dataloader_train,val_loader=dataloader_val,\
-        criterion=criterion,optimizer=optimizer,save_folder=save_dir,scheduler=args.scheduler,model_name=args.model_name,\
+        criterion=criterion,optimizer=optimizer,save_folder=save_dir,auto_lr=False,scheduler=args.scheduler,model_name=args.model_name,\
             benchmark=args.benchmark, save_best=args.save_best,save_all_ep=args.save_all_ep,device=device,num_classes=21)
 
     # Final evaluation

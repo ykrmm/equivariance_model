@@ -68,7 +68,13 @@ def main():
         test_dataset = mdset.LandscapeDataset(dataroot_landcover,image_set="test",fixing_rotate=True,angle_fix=angle)
         dataloader_val = torch.utils.data.DataLoader(test_dataset,num_workers=nw,pin_memory=pm,\
             batch_size=bs)
-        m_iou,iou = ev.eval_model_tmetrics(model,dataloader_val,device=device,num_classes=5,ign_index=4)
+        if angle % 90 ==0:
+            state = ev.eval_model(model,dataloader_val,device=device,num_classes=4)
+            m_iou,iou = state.metrics['mean IoU'],state.metrics['IoU']
+        else:
+            m_iou,iou = ev.eval_model_tmetrics(model,dataloader_val,device=device,num_classes=4)
+
+        
         try: 
             m_iou = m_iou.item()
         except:

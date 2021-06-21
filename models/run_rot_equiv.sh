@@ -1,10 +1,10 @@
-gamma=0.01
+gamma=0.5
 mtask=False
 rotate=True
-gpu=2
+gpu=0
 split=True
 split_ratio=0.3
-Loss=KL
+Loss=CE
 
 
 

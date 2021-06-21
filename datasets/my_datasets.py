@@ -570,9 +570,9 @@ class LandscapeDataset(Dataset):
         
         # Apply a fixed rotation for test time:
         if self.fixing_rotate:
-            image = TF.rotate(image,angle=self.angle_fix,expand=True,fill=4)
+            image = TF.rotate(image,angle=self.angle_fix,expand=True,fill=-1,interpolation=TF.InterpolationMode.BILINEAR)
             mask = mask.unsqueeze(0)
-            mask = TF.rotate(mask,angle=self.angle_fix,expand=True,fill=4)
+            mask = TF.rotate(mask,angle=self.angle_fix,expand=True,fill=-1)
             mask = mask.squeeze()
         if self.normalize:
             image = TF.normalize(image,self.mean,self.std)

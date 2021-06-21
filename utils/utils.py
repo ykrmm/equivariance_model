@@ -456,7 +456,14 @@ def get_cmap_landcover() -> colors.ListedColormap:
     """
         return a cmap for landcover dataset
     """
-    cmap_test = colors.ListedColormap(['black','blue','green'])
+    cmap_test = colors.ListedColormap(['black','grey','blue','green'])
+    return cmap_test
+
+def get_cmap_landcover_rotate() -> colors.ListedColormap:
+    """
+        return a cmap for landcover dataset
+    """
+    cmap_test = colors.ListedColormap(['yellow','black','grey','blue','green'])
     return cmap_test
 
 def plot_pred_mask(pred,mask,cmap=None,iou=True):
