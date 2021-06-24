@@ -98,7 +98,7 @@ def eval_model(model,val_loader,device='cpu',num_classes=21):
             try:
                 mask_pred = mask_pred['out'] 
             except:
-                print('')
+                mask_pred = mask_pred
             return mask_pred, mask
 
     val_evaluator = Engine(evaluate_function)

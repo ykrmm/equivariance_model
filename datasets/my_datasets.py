@@ -2,6 +2,7 @@ import os
 import os.path
 import tarfile
 import collections
+from numpy.lib.ufunclike import fix
 import torch
 from torchvision.datasets.utils import download_url, check_integrity, verify_str_arg
 import torchvision.transforms.functional as TF
@@ -150,7 +151,10 @@ class VOCSegmentation(VisionDataset):
                  p=0.5,
                  p_rotate = 0.25,
                  rotate=False,
-                 scale=True):
+                 scale=True,
+                 fixing_rotate=False,
+                 angle_fix=0,
+                 normalize = True):
         super(VOCSegmentation, self).__init__(root, transforms, transform, target_transform)
         ## Transformations
         self.mean = mean
@@ -163,6 +167,12 @@ class VOCSegmentation(VisionDataset):
         self.rotate = rotate
         self.scale = scale
         self.train = image_set == 'train' or image_set == 'trainval'
+        self.fixing_rotate = fixing_rotate
+        self.angle_fix = angle_fix 
+        self.normalize = normalize
+
+        if fixing_rotate:
+            self.rotate = False
         ##
         self.year = year
         if year == "2007" and image_set == "test":
@@ -238,8 +248,22 @@ class VOCSegmentation(VisionDataset):
                     
         # Transform to tensor
         image = TF.to_tensor(image)
-        image = TF.normalize(image,self.mean,self.std)
-        mask = to_tensor_target(mask)
+        if self.normalize:
+            mask = to_tensor_target(mask)
+        else:
+            mask = to_tensor_target_no_norm(mask)
+
+        
+
+        if self.fixing_rotate:
+            mask = mask.unsqueeze(0)
+            image = TF.rotate(image,angle=self.angle_fix)
+            mask = TF.rotate(mask,angle=self.angle_fix)
+            mask = mask.squeeze()
+        
+
+        if self.normalize:
+            image = TF.normalize(image,self.mean,self.std)
         return image, mask
 
     def __getitem__(self, index):
@@ -272,6 +296,12 @@ def to_tensor_target(mask):
     mask = np.array(mask)
     # border
     mask[mask==255] = 0 # border = background 
+    return torch.LongTensor(mask)
+
+def to_tensor_target_no_norm(mask):
+    mask = np.array(mask)
+    # border
+    #mask[mask==255] = 0 # border = background 
     return torch.LongTensor(mask)
 
 def to_tensor_target_lc(mask):
@@ -570,12 +600,19 @@ class LandscapeDataset(Dataset):
         
         # Apply a fixed rotation for test time:
         if self.fixing_rotate:
-            image = TF.rotate(image,angle=self.angle_fix,expand=True,fill=-1,interpolation=TF.InterpolationMode.BILINEAR)
             mask = mask.unsqueeze(0)
-            mask = TF.rotate(mask,angle=self.angle_fix,expand=True,fill=-1)
+            image = TF.pad(image,107,padding_mode='symmetric')
+            mask = TF.pad(mask,107,padding_mode='symmetric')
+
+            image = TF.rotate(image,angle=self.angle_fix,expand=False,fill=-1,interpolation=TF.InterpolationMode.BILINEAR)
+            mask = TF.rotate(mask,angle=self.angle_fix,expand=False,fill=-1)
+            image = TF.center_crop(image,(512,512))
+            mask = TF.center_crop(mask,(512,512))
             mask = mask.squeeze()
         if self.normalize:
+            #print(image.size())
             image = TF.normalize(image,self.mean,self.std)
+            #print(image.size())
         
         return image, mask
 
