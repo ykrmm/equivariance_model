@@ -50,7 +50,7 @@ def infere_and_save(model,save_dir,list_iter,test_dataset_no_norm,test_dataset,d
             im = im.numpy()
             m = m.numpy()
             im = im*255
-            t = t.astype(np.uint8)
+            im = im.astype(np.uint8)
             im = Image.fromarray(im)
             m = Image.fromarray(m)
             im = im.convert("RGB")
