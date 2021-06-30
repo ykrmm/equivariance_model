@@ -493,7 +493,7 @@ def get_cmap_landcover() -> colors.ListedColormap:
     """
         return a cmap for landcover dataset
     """
-    cmap_test = colors.ListedColormap(['black','grey','blue','green'])
+    cmap_test = colors.ListedColormap(['black','grey','green','blue'])
     return cmap_test
 
 def get_cmap_landcover_rotate() -> colors.ListedColormap:
