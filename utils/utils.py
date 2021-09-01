@@ -16,6 +16,8 @@ import os
 import random
 import torchvision.transforms.functional as TF
 from skimage.io import imshow
+from my_losses import JSD
+
 ###########################################################################################################################|
 #--------------------------------------------------------------------------------------------------------------------------|
 #                                            CONSTANTS AND TYPES
@@ -38,7 +40,7 @@ def get_voc_cst():
 
 def get_criterion(key:str,reduction='batchmean',num_classes=21) -> dict:
     d = {'CE':nn.CrossEntropyLoss(ignore_index=num_classes),'KL':nn.KLDivLoss(reduction = reduction, log_target = False),\
-        'L1':nn.L1Loss(reduction='mean'),'MSE':nn.MSELoss()}
+        'L1':nn.L1Loss(reduction='mean'),'MSE':nn.MSELoss(),'JSD':JSD()}
     return d[key]
 
 ### TYPE 
@@ -333,6 +335,9 @@ def compute_transformations_batch(x,model,angle,reshape=False,\
 
     if Loss=='KL':
         loss = criterion(logsoftmax(pred_rot_x.cpu()),softmax(pred_rot.cpu())) #KL divergence between the two predictions
+        loss = loss/ (pred_x.size()[2]*pred_x.size()[3]) # Divide by the number of pixel in the image. Essential for batchmean mode in KLDiv
+    elif Loss=='JSD':
+        loss = criterion(pred_rot_x.cpu(),pred_rot.cpu()) #JSD divergence between the two predictions
         loss = loss/ (pred_x.size()[2]*pred_x.size()[3]) # Divide by the number of pixel in the image. Essential for batchmean mode in KLDiv
     elif Loss == 'CE':
         loss = criterion(pred_rot.cpu(),pred_rot_x.argmax(dim=1).detach().cpu()) # Use the prediction on the original image as GTruth.  

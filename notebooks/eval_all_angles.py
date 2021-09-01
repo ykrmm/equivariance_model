@@ -38,7 +38,7 @@ dataroot_sbd = '/share/DEEPLEARNING/datasets/sbd'
 dataroot_coco = '/share/DEEPLEARNING/datasets/coco'
 dataroot_landcover = '/share/DEEPLEARNING/datasets/landcover'
 dataroot_coco2voc = '/users/k/karmimy/data/coco2voc'
-VOC = False
+VOC = True
 
 nw = 4 
 pm = True
@@ -53,7 +53,7 @@ folder_model = join(load_dir,exp)
 #pretrained=True
 
 # GPU 
-gpu = 0
+gpu = 1
 # EVAL PARAMETERS
 bs = 2  
 
@@ -77,10 +77,10 @@ pi_rotate = False
 
 # DEVICE
 # Decide which device we want to run on
-device = torch.device("cuda:"+str(gpu) if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:"+str(1) if torch.cuda.is_available() else "cpu")
 print("device :",device)
 
-model_dir = '/share/homes/karmimy/equiv/save_model/rot_equiv_lc/11'
+model_dir = '/share/homes/karmimy/equiv/save_model/rot_equiv/49'
 
 model = torch.load(join(model_dir,model_name),map_location=device)
 
@@ -108,10 +108,10 @@ dataloader_val = torch.utils.data.DataLoader(test_dataset,num_workers=nw,pin_mem
 
 
 
-l_angles = [320,330,340,350,0,10,20,30,40]
+l_angles = [0,30,45,60]
 l_iou = []
 for angle in l_angles:
-    test_dataset = mdset.LandscapeDataset(dataroot_landcover,image_set="test",fixing_rotate=True,angle_fix=angle)
+    test_dataset = mdset.VOCSegmentation(dataroot_voc,year='2012', image_set='val', download=True,fixing_rotate=True,angle_fix=angle)
     dataloader_val = torch.utils.data.DataLoader(test_dataset,num_workers=nw,pin_memory=pm,\
         batch_size=bs)
     state = ev.eval_model(model,dataloader_val,device=device,num_classes=4)
@@ -120,3 +120,5 @@ for angle in l_angles:
     loss = state.metrics['CE Loss']
     print('EVAL FOR ANGLE',angle,': IOU',iou,', ACCURACY',acc,', LOSS',loss)
     l_iou.append(state.metrics['mean IoU'])
+
+print(l_iou)
